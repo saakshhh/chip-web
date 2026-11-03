@@ -1,0 +1,89 @@
+/* Site styles. Owner: Alex. View-specific styles live under the view's section heading. */
+
+:root {
+  --ink: #1f2328;
+  --quiet: #5b636e;
+  --line: #d8dde3;
+  --panel: #ffffff;
+  --page: #f6f7f9;
+  --land: #e9edf1;
+  --accent: #2563eb;      /* selection, current year */
+  --imports: #2563eb;     /* flows into the selected country */
+  --exports: #ea580c;     /* flows out of the selected country */
+  --event: #b45309;       /* timeline events */
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--page); }
+button, select { font: inherit; }
+
+.site-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+  max-width: 1400px; margin: 0 auto; padding: 20px 16px 8px; }
+.site-header h1 { margin: 0; font-size: 24px; }
+.subtitle { margin: 2px 0 0; color: var(--quiet); }
+.controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.controls label { display: flex; gap: 8px; align-items: center; color: var(--quiet); }
+.selection { display: inline-flex; gap: 8px; align-items: center; padding: 4px 6px 4px 12px; border-radius: 999px;
+  background: #e8efff; color: var(--accent); font-weight: 600; }
+.selection[hidden] { display: none; }
+.selection button { border: 0; background: #fff; color: var(--ink); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
+
+.layout { max-width: 1400px; margin: 0 auto; padding: 8px 16px 16px; display: grid; gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "network side" "timeline timeline"; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
+.panel h2 { font-size: 15px; margin: 0 0 4px; }
+.panel .hint { color: var(--quiet); margin: 0 0 8px; font-size: 13px; }
+.panel-network { grid-area: network; }
+.side { grid-area: side; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel-timeline { grid-area: timeline; }
+svg { display: block; width: 100%; height: auto; }
+
+.site-footer { max-width: 1400px; margin: 0 auto; padding: 0 16px 24px; color: var(--quiet); font-size: 12px; }
+.site-footer a { color: var(--accent); margin-left: 8px; }
+
+.loading-message { position: fixed; inset: 0; display: none; place-items: center; background: rgba(246, 247, 249, .85);
+  font-size: 16px; color: var(--quiet); }
+body.loading .loading-message { display: grid; }
+.error { color: #b91c1c; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; grid-template-areas: "network" "side" "timeline"; }
+}
+
+/* ---------- Trade network (Joseph) ---------- */
+.net-sphere { fill: #f8fafc; }
+.net-country { fill: var(--land); stroke: #fff; stroke-width: .5; }
+.net-flow { fill: none; stroke: #94a3b8; stroke-opacity: .45; stroke-linecap: round; }
+.net-flow.imports { stroke: var(--imports); stroke-opacity: .75; }
+.net-flow.exports { stroke: var(--exports); stroke-opacity: .75; }
+.net-node { stroke: #fff; stroke-width: 1; cursor: pointer; }
+.net-node.hub { stroke: var(--ink); stroke-dasharray: 2 2; stroke-width: 1.5; }
+.net-node.selected { stroke: var(--ink); stroke-width: 2.5; stroke-dasharray: none; }
+.net-node.brushed { stroke: var(--accent); stroke-width: 2.5; }
+.net-node.faded, .net-label.faded { opacity: .2; }
+.net-label { font-size: 10.5px; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 3px; pointer-events: none; }
+.net-legend text { font-size: 11px; fill: var(--quiet); }
+
+/* ---------- Timeline (Thomas) ---------- */
+.tl-controls { display: flex; gap: 12px; align-items: center; margin-bottom: 4px; }
+.tl-controls input[type=range] { flex: 1; }
+.tl-controls button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 4px 12px; cursor: pointer; }
+.tl-year { font-weight: 700; min-width: 3.2em; }
+.tl-line { fill: none; stroke: var(--accent); stroke-width: 2; }
+.tl-axis text { fill: var(--quiet); }
+.tl-event line { stroke: var(--event); stroke-dasharray: 3 3; }
+.tl-event.data line { stroke: #9ca3af; }
+.tl-event text { font-size: 10.5px; fill: var(--quiet); }
+.tl-current { stroke: var(--ink); stroke-width: 1.5; }
+
+/* ---------- Dependency and scatterplot (Kyungmin) ---------- */
+.dep-bar rect { fill: var(--imports); }
+.dep-bar.other rect { fill: #cbd5e1; }
+.dep-bar text { font-size: 12px; fill: var(--ink); }
+.dep-stats { display: flex; gap: 16px; margin: 8px 0 0; font-size: 13px; color: var(--quiet); }
+.dep-stats b { color: var(--ink); }
+.sc-dot { stroke: #fff; stroke-width: .5; cursor: pointer; }
+.sc-dot.selected { stroke: var(--ink); stroke-width: 2; }
+.sc-dot.dim { opacity: .25; }
+.sc-axis text { fill: var(--quiet); font-size: 11px; }
+.sc-label { font-size: 11px; fill: var(--quiet); }

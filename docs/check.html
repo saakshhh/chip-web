@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Chip Web: data check</title>
+<style>
+  :root { --ink:#1f2328; --quiet:#5b636e; --line:#d8dde3; --land:#eef1f4; --bg:#ffffff; --accent:#2563eb; }
+  body { margin:0; font:14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink); background:var(--bg); }
+  header, main { max-width:1100px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  p.note { color:var(--quiet); margin:0 0 12px; }
+  .controls { display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin:8px 0 12px; }
+  .controls label { display:flex; gap:8px; align-items:center; }
+  #year { width:260px; }
+  #map { width:100%; height:auto; border:1px solid var(--line); border-radius:8px; background:#fbfcfd; }
+  .country { fill:var(--land); stroke:#fff; stroke-width:.5; }
+  .flow { fill:none; stroke:var(--accent); stroke-opacity:.35; stroke-linecap:round; }
+  .node { stroke:#fff; stroke-width:1; }
+  .node.hub { stroke:var(--ink); stroke-width:1.5; stroke-dasharray:2 2; }
+  .label { font-size:10.5px; fill:var(--ink); paint-order:stroke; stroke:#fff; stroke-width:3px; pointer-events:none; }
+  table { border-collapse:collapse; margin-top:16px; font-size:13px; }
+  td, th { border-bottom:1px solid var(--line); padding:4px 10px; text-align:left; }
+  .ok { color:#15803d; } .bad { color:#b91c1c; }
+  #legend span { display:inline-flex; align-items:center; gap:4px; margin-right:12px; font-size:12px; color:var(--quiet); }
+  #legend i { width:10px; height:10px; border-radius:50%; display:inline-block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>The Chip Web: data check</h1>
+  <p class="note">A quick page to confirm the processed data loads and joins correctly. Nodes sit at country
+  centroids (no collision handling yet); lines are great-circle paths for the year's strongest flows.
+  The real site will replace this page.</p>
+  <div class="controls">
+    <label>Year <input id="year" type="range" min="1995" max="2024" step="1"><b id="yearLabel"></b></label>
+    <label>Product
+      <select id="product"><option value="8542">HS 8542 integrated circuits</option>
+      <option value="8541">HS 8541 other semiconductor devices</option></select></label>
+    <label>Flows shown <select id="topn"><option>25</option><option selected>50</option><option>100</option><option>150</option></select></label>
+  </div>
+  <div id="legend"></div>
+</header>
+<main>
+  <svg id="map" viewBox="0 0 1000 520" role="img" aria-label="World map of chip trade flows"></svg>
+  <table id="checks"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody></tbody></table>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script>
+const files = ["meta", "countries", "events", "world_trade", "flows_8542", "flows_8541",
+               "importers_8542", "exporters_8542", "importers_8541", "exporters_8541"];
+
+Promise.all([d3.json("data/world-110m.json"), ...files.map(f => d3.json(`data/${f}.json`))])
+  .then(([world, ...loaded]) => {
+    const D = Object.fromEntries(files.map((f, i) => [f, loaded[i]]));
+    run(world, D);
+  })
+  .catch(err => {
+    document.querySelector("#checks tbody").innerHTML =
+      `<tr><td>Loading data</td><td class="bad">Failed: ${err.message}. Serve the folder with a local server (see README).</td></tr>`;
+  });
+
+function run(world, D) {
+  const W = 1000, H = 520;
+  // Pacific-centered Equal Earth, so East Asia and the Americas are not split by the map edge.
+  const projection = d3.geoEqualEarth().rotate([-150, 0]).fitExtent([[10, 10], [W - 10, H - 10]], { type: "Sphere" });
+  const path = d3.geoPath(projection);
+  const svg = d3.select("#map");
+
+  svg.append("path").attr("d", path({ type: "Sphere" })).attr("fill", "#f4f7fa");
+  svg.append("g").selectAll("path")
+    .data(topojson.feature(world, world.objects.countries).features)
+    .join("path").attr("class", "country").attr("d", path);
+
+  const byCode = new Map(D.countries.map(c => [c.c, c]));
+  const regions = [...new Set(D.countries.map(c => c.region))].sort();
+  const color = d3.scaleOrdinal(regions, d3.schemeTableau10);
+  d3.select("#legend").selectAll("span").data(regions).join("span")
+    .html(r => `<i style="background:${color(r)}"></i>${r}`);
+
+  const flowsG = svg.append("g"), nodesG = svg.append("g"), labelsG = svg.append("g");
+
+  function draw() {
+    const year = +d3.select("#year").property("value");
+    const p = d3.select("#product").property("value");
+    const topn = +d3.select("#topn").property("value");
+    d3.select("#yearLabel").text(year);
+
+    const flows = D[`flows_${p}`].filter(f => f.y === year && f.g === 1).slice(0, topn)
+      .filter(f => byCode.get(f.e)?.lat != null && byCode.get(f.i)?.lat != null);
+    const exp = new Map(D[`exporters_${p}`].filter(e => e.y === year).map(e => [e.c, e]));
+    const vmax = d3.max(flows, f => f.v) || 1;
+    const width = d3.scaleSqrt([0, vmax], [0.5, 9]);
+
+    flowsG.selectAll("path").data(flows, f => f.e + f.i).join("path")
+      .attr("class", "flow")
+      .attr("d", f => path({ type: "LineString", coordinates: [
+        [byCode.get(f.e).lon, byCode.get(f.e).lat], [byCode.get(f.i).lon, byCode.get(f.i).lat]] }))
+      .attr("stroke-width", f => width(f.v))
+      .selectAll("title").data(f => [f]).join("title")
+      .text(f => `${byCode.get(f.e).name} → ${byCode.get(f.i).name}: $${d3.format(",.0f")(f.v)}M`);
+
+    const nodes = D.countries.filter(c => c.lat != null && exp.has(c.c));
+    const emax = d3.max(nodes, c => exp.get(c.c).exports) || 1;
+    const r = d3.scaleSqrt([0, emax], [1.5, 18]);
+    nodesG.selectAll("circle").data(nodes, c => c.c).join("circle")
+      .attr("class", c => "node" + (c.hub ? " hub" : ""))
+      .attr("cx", c => projection([c.lon, c.lat])[0]).attr("cy", c => projection([c.lon, c.lat])[1])
+      .attr("r", c => r(exp.get(c.c).exports)).attr("fill", c => color(c.region)).attr("fill-opacity", .85)
+      .selectAll("title").data(c => [c]).join("title")
+      .text(c => { const e = exp.get(c.c);
+        return `${c.name}${c.hub ? " (re-export hub)" : ""}\nExports $${d3.format(",.0f")(e.exports)}M · rank ${e.rank} · top supplier for ${e.top_supplier_of} countries`; });
+
+    const top10 = [...exp.values()].sort((a, b) => b.exports - a.exports).slice(0, 10).map(e => byCode.get(e.c)).filter(c => c && c.lat != null);
+    labelsG.selectAll("text").data(top10, c => c.c).join("text").attr("class", "label")
+      .attr("x", c => projection([c.lon, c.lat])[0] + 6).attr("y", c => projection([c.lon, c.lat])[1] - 6).text(c => c.name);
+  }
+
+  const yrs = D.meta.years;
+  d3.select("#year").attr("min", yrs[0]).attr("max", yrs[1]).property("value", yrs[1]).on("input", draw);
+  d3.selectAll("#product, #topn").on("change", draw);
+  draw();
+
+  // Simple integrity checks the whole team can see.
+  const ids = new Set(D.countries.map(c => c.c));
+  const flowIds = new Set(D.flows_8542.flatMap(f => [f.e, f.i]));
+  const missing = [...flowIds].filter(id => !ids.has(id));
+  const noPos = D.countries.filter(c => c.lat == null).map(c => c.name);
+  const rows = [
+    ["Data source", `${D.meta.source}, release ${D.meta.release}, built ${D.meta.built}`],
+    ["Years", `${yrs[0]} to ${yrs[1]}`],
+    ["Countries and territories", D.countries.length],
+    ["HS 8542 flows loaded", D.flows_8542.length.toLocaleString()],
+    ["Flow ids missing from countries.json", missing.length ? `<span class="bad">${missing.join(", ")}</span>` : `<span class="ok">none</span>`],
+    ["Countries without a map position", noPos.length ? noPos.join(", ") : `<span class="ok">none</span>`],
+    ["Inflation adjusted", D.meta.inflation_adjusted ? `yes, ${D.meta.base_year} dollars` : "no"],
+    ["Taiwan present", ids.has("TWN") ? `<span class="ok">yes</span>` : `<span class="bad">no</span>`],
+  ];
+  d3.select("#checks tbody").selectAll("tr").data(rows).join("tr").html(d => `<td>${d[0]}</td><td>${d[1]}</td>`);
+}
+</script>
+</body>
+</html>
