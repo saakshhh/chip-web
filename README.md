@@ -7,22 +7,24 @@ chips to whom, which countries depend on just one or two suppliers, and how all 
 shifted around events like the chip shortage and the 2022 U.S. export controls.
 
 **Live site:** https://saakshhh.github.io/chip-web/
-(Right now it's a simple data check page. The real visualization will replace it.)
+(A first working version: the map, timeline, supplier panel and scatterplot are linked, but
+every view still has a to-do list. The original data check page is at
+[check.html](https://saakshhh.github.io/chip-web/check.html).)
 
 **Team:** Joseph Hsin, Thomas Temperley, Saksham Singh, Kyungmin Kim, Alex Jung
 
 ## Who's leading what
 
-| Part | Lead |
-|---|---|
-| Data and metrics | Saksham |
-| Trade network (the map) | TBD |
-| Timeline and events | TBD |
-| Dependency and concentration views | TBD |
-| Interface and integration | TBD |
+| Part | Lead | Files |
+|---|---|---|
+| Data and metrics | Saksham | `pipeline/`, `docs/js/data.js` |
+| Trade network (the map) | Joseph | `docs/js/network.js` |
+| Timeline and events | Thomas | `docs/js/timeline.js` |
+| Dependency and concentration views | Kyungmin | `docs/js/dependency.js`, `docs/js/scatter.js` |
+| Interface and integration | Alex | `docs/index.html`, `docs/css/style.css`, `docs/js/main.js`, `docs/js/state.js` |
 
 Leads are responsible for getting their part done, but we're building this together, so
-jump in anywhere.
+jump in anywhere. Each view file starts with a TODO list of what's left.
 
 ## Getting started
 
@@ -36,26 +38,88 @@ python3 -m http.server 8000 --directory docs
 ```
 
 Then open http://localhost:8000. (Opening `index.html` directly by double-clicking won't
-work, because browsers block it from loading the data files.)
+work, because browsers block it from loading the data files.) After you edit a file, just
+refresh the page.
 
 ## What's in here
 
 ```
-docs/          the website (GitHub Pages serves this folder)
-  index.html   the page you see at the live link
-  data/        the processed data the site loads
-pipeline/      the Python script that builds the data from the raw files
-reports/       proposal, progress report, final write-up
+docs/                 the website (GitHub Pages serves this folder)
+  index.html          page layout: one <section> per view
+  check.html          the original data check page
+  css/style.css       all styles, with a section for each view
+  js/
+    main.js           starts everything: loads data, creates the views, page controls
+    state.js          the shared selection (year, product, country, brushed countries)
+    data.js           loads the JSON and has helpers for looking things up
+    network.js        the map
+    timeline.js       the timeline, year slider and Play button
+    dependency.js     where the selected country buys its chips
+    scatter.js        the concentration scatterplot
+  data/               the processed data the site loads
+pipeline/             the Python script that builds the data from the raw files
+reports/              proposal, progress report, final write-up
 ```
 
-## How we work
+### How the views talk to each other
 
-- Make a branch for your part (for example `network` or `timeline`), not `main`.
-- When something works, open a pull request and ask someone to look it over before merging.
-- Try to keep your code in your own file under `docs/js/` so we don't keep editing the same
-  file and hitting merge conflicts.
-- Every view should react to the same shared selections: year, country, product, and any
-  countries brushed in the scatterplot. We'll agree on the exact names at the kickoff.
+Views never call each other directly. They all read one shared `state` and listen for
+changes:
+
+```js
+import { state, on, setCountry } from "./state.js";
+
+on("countrySelected", s => highlight(s.country));   // react when anyone selects a country
+setCountry("JPN");                                    // select a country yourself
+```
+
+| Event | Fires when | What changed |
+|---|---|---|
+| `yearChanged` | the slider moves, Play runs, or the timeline is clicked | `state.year` |
+| `productChanged` | the product dropdown changes (data is already loaded) | `state.product` |
+| `countrySelected` | a country is clicked anywhere, or cleared with Esc | `state.country` (ISO3 or `null`) |
+| `brushChanged` | countries are brushed in the scatterplot | `state.brushed` (a Set) |
+| `playingChanged` | Play starts or stops | `state.playing` |
+
+Get numbers through the helpers in `data.js` (for example `data.importer("8542", 2024, "JPN")`)
+instead of reading the JSON files yourself, so a change to the data format only needs fixing
+in one place.
+
+## How to make changes
+
+We never commit straight to `main`. Every change goes through a branch and a pull request,
+so someone else sees it before it reaches the live site.
+
+1. **Start from the latest `main`:**
+   ```bash
+   git checkout main
+   git pull
+   ```
+2. **Make a branch for what you're doing:**
+   ```bash
+   git checkout -b network-collision-layout
+   ```
+   Name it after the work, like `timeline-play-speed` or `dependency-stacked-area`.
+3. **Make your changes and test them locally** (`python3 -m http.server 8000 --directory docs`).
+4. **Commit and push your branch:**
+   ```bash
+   git add docs/js/network.js
+   git commit -m "Resolve node overlaps with a frozen collision layout"
+   git push -u origin network-collision-layout
+   ```
+5. **Open a pull request:** GitHub shows a "Compare & pull request" button after you push.
+   Say what you changed and how to check it, and ask a teammate to review.
+6. **The reviewer checks it locally**, leaves comments or approves, and then it's merged into
+   `main`. The live site updates a minute or two later.
+7. **Delete the branch** after it's merged, and go back to step 1 for the next thing.
+
+A few habits that help:
+
+- Keep pull requests small, one feature or fix at a time. They're much easier to review.
+- If you need to change someone else's file, mention them in the pull request.
+- Pull `main` into your branch every day or two (`git pull origin main`) so you don't drift.
+- If you get a merge conflict and aren't sure what to keep, ask in the group chat before
+  pushing.
 
 ## The data
 
