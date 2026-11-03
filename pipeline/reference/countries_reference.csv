@@ -1,0 +1,251 @@
+iso3,iso_num,name,subregion,region,lat,lon,in_world_atlas_110m
+ABW,533,Aruba,Caribbean,Latin America & Caribbean,12.5,-69.96666666,False
+AFG,004,Afghanistan,Southern Asia,South Asia,33,65,True
+AGO,024,Angola,Middle Africa,Sub-Saharan Africa,-12.5,18.5,True
+AIA,660,Anguilla,Caribbean,Latin America & Caribbean,18.25,-63.16666666,False
+ALA,248,Åland Islands,Northern Europe,Europe & Central Asia,60.116667,19.9,False
+ALB,008,Albania,Southeast Europe,Europe & Central Asia,41,20,True
+AND,020,Andorra,Southern Europe,Europe & Central Asia,42.5,1.5,False
+ARE,784,United Arab Emirates,Western Asia,Middle East & North Africa,24,54,True
+ARG,032,Argentina,South America,Latin America & Caribbean,-34,-64,True
+ARM,051,Armenia,Western Asia,Europe & Central Asia,40,45,True
+ASM,016,American Samoa,Polynesia,East Asia & Pacific,-14.33333333,-170,False
+ATA,010,Antarctica,,Other,-90,0,True
+ATF,260,French Southern and Antarctic Lands,,Other,-49.25,69.167,True
+ATG,028,Antigua and Barbuda,Caribbean,Latin America & Caribbean,17.05,-61.8,False
+AUS,036,Australia,Australia and New Zealand,East Asia & Pacific,-27,133,True
+AUT,040,Austria,Central Europe,Europe & Central Asia,47.33333333,13.33333333,True
+AZE,031,Azerbaijan,Western Asia,Europe & Central Asia,40.5,47.5,True
+BDI,108,Burundi,Eastern Africa,Sub-Saharan Africa,-3.5,30,True
+BEL,056,Belgium,Western Europe,Europe & Central Asia,50.83333333,4,True
+BEN,204,Benin,Western Africa,Sub-Saharan Africa,9.5,2.25,True
+BES,535,Caribbean Netherlands,Caribbean,Latin America & Caribbean,12.18,-68.25,False
+BFA,854,Burkina Faso,Western Africa,Sub-Saharan Africa,13,-2,True
+BGD,050,Bangladesh,Southern Asia,South Asia,24,90,True
+BGR,100,Bulgaria,Southeast Europe,Europe & Central Asia,43,25,True
+BHR,048,Bahrain,Western Asia,Middle East & North Africa,26,50.55,False
+BHS,044,Bahamas,Caribbean,Latin America & Caribbean,24.25,-76,True
+BIH,070,Bosnia and Herzegovina,Southeast Europe,Europe & Central Asia,44,18,True
+BLM,652,Saint Barthélemy,Caribbean,Latin America & Caribbean,18.5,-63.41666666,False
+BLR,112,Belarus,Eastern Europe,Europe & Central Asia,53,28,True
+BLZ,084,Belize,Central America,Latin America & Caribbean,17.25,-88.75,True
+BMU,060,Bermuda,North America,North America,32.33333333,-64.75,False
+BOL,068,Bolivia,South America,Latin America & Caribbean,-17,-65,True
+BRA,076,Brazil,South America,Latin America & Caribbean,-10,-55,True
+BRB,052,Barbados,Caribbean,Latin America & Caribbean,13.16666666,-59.53333333,False
+BRN,096,Brunei,South-Eastern Asia,East Asia & Pacific,4.5,114.66666666,True
+BTN,064,Bhutan,Southern Asia,South Asia,27.5,90.5,True
+BVT,074,Bouvet Island,,Other,-54.43333333,3.4,False
+BWA,072,Botswana,Southern Africa,Sub-Saharan Africa,-22,24,True
+CAF,140,Central African Republic,Middle Africa,Sub-Saharan Africa,7,21,True
+CAN,124,Canada,North America,North America,60,-95,True
+CCK,166,Cocos (Keeling) Islands,Australia and New Zealand,East Asia & Pacific,-12.5,96.83333333,False
+CHE,756,Switzerland,Western Europe,Europe & Central Asia,47,8,True
+CHL,152,Chile,South America,Latin America & Caribbean,-30,-71,True
+CHN,156,China,Eastern Asia,East Asia & Pacific,35,105,True
+CIV,384,Ivory Coast,Western Africa,Sub-Saharan Africa,8,-5,True
+CMR,120,Cameroon,Middle Africa,Sub-Saharan Africa,6,12,True
+COD,180,DR Congo,Middle Africa,Sub-Saharan Africa,0,25,True
+COG,178,Republic of the Congo,Middle Africa,Sub-Saharan Africa,-1,15,True
+COK,184,Cook Islands,Polynesia,East Asia & Pacific,-21.23333333,-159.76666666,False
+COL,170,Colombia,South America,Latin America & Caribbean,4,-72,True
+COM,174,Comoros,Eastern Africa,Sub-Saharan Africa,-12.16666666,44.25,False
+CPV,132,Cape Verde,Western Africa,Sub-Saharan Africa,16,-24,False
+CRI,188,Costa Rica,Central America,Latin America & Caribbean,10,-84,True
+CUB,192,Cuba,Caribbean,Latin America & Caribbean,21.5,-80,True
+CUW,531,Curaçao,Caribbean,Latin America & Caribbean,12.116667,-68.933333,False
+CXR,162,Christmas Island,Australia and New Zealand,East Asia & Pacific,-10.5,105.66666666,False
+CYM,136,Cayman Islands,Caribbean,Latin America & Caribbean,19.5,-80.5,False
+CYP,196,Cyprus,Southern Europe,Europe & Central Asia,35,33,True
+CZE,203,Czechia,Central Europe,Europe & Central Asia,49.75,15.5,True
+DEU,276,Germany,Western Europe,Europe & Central Asia,51,9,True
+DJI,262,Djibouti,Eastern Africa,Middle East & North Africa,11.5,43,True
+DMA,212,Dominica,Caribbean,Latin America & Caribbean,15.41666666,-61.33333333,False
+DNK,208,Denmark,Northern Europe,Europe & Central Asia,56,10,True
+DOM,214,Dominican Republic,Caribbean,Latin America & Caribbean,19,-70.66666666,True
+DZA,012,Algeria,Northern Africa,Middle East & North Africa,28,3,True
+ECU,218,Ecuador,South America,Latin America & Caribbean,-2,-77.5,True
+EGY,818,Egypt,Northern Africa,Middle East & North Africa,27,30,True
+ERI,232,Eritrea,Eastern Africa,Sub-Saharan Africa,15,39,True
+ESH,732,Western Sahara,Northern Africa,Middle East & North Africa,24.5,-13,True
+ESP,724,Spain,Southern Europe,Europe & Central Asia,40,-4,True
+EST,233,Estonia,Northern Europe,Europe & Central Asia,59,26,True
+ETH,231,Ethiopia,Eastern Africa,Sub-Saharan Africa,8,38,True
+FIN,246,Finland,Northern Europe,Europe & Central Asia,64,26,True
+FJI,242,Fiji,Melanesia,East Asia & Pacific,-18,175,True
+FLK,238,Falkland Islands,South America,Latin America & Caribbean,-51.75,-59,True
+FRA,250,France,Western Europe,Europe & Central Asia,46,2,True
+FRO,234,Faroe Islands,Northern Europe,Europe & Central Asia,62,-7,False
+FSM,583,Micronesia,Micronesia,East Asia & Pacific,6.91666666,158.25,False
+GAB,266,Gabon,Middle Africa,Sub-Saharan Africa,-1,11.75,True
+GBR,826,United Kingdom,Northern Europe,Europe & Central Asia,54,-2,True
+GEO,268,Georgia,Western Asia,Europe & Central Asia,42,43.5,True
+GGY,831,Guernsey,Northern Europe,Europe & Central Asia,49.46666666,-2.58333333,False
+GHA,288,Ghana,Western Africa,Sub-Saharan Africa,8,-2,True
+GIB,292,Gibraltar,Southern Europe,Europe & Central Asia,36.13333333,-5.35,False
+GIN,324,Guinea,Western Africa,Sub-Saharan Africa,11,-10,True
+GLP,312,Guadeloupe,Caribbean,Latin America & Caribbean,16.25,-61.583333,False
+GMB,270,Gambia,Western Africa,Sub-Saharan Africa,13.46666666,-16.56666666,True
+GNB,624,Guinea-Bissau,Western Africa,Sub-Saharan Africa,12,-15,True
+GNQ,226,Equatorial Guinea,Middle Africa,Sub-Saharan Africa,2,10,True
+GRC,300,Greece,Southern Europe,Europe & Central Asia,39,22,True
+GRD,308,Grenada,Caribbean,Latin America & Caribbean,12.11666666,-61.66666666,False
+GRL,304,Greenland,North America,Europe & Central Asia,72,-40,True
+GTM,320,Guatemala,Central America,Latin America & Caribbean,15.5,-90.25,True
+GUF,254,French Guiana,South America,Latin America & Caribbean,4,-53,False
+GUM,316,Guam,Micronesia,East Asia & Pacific,13.46666666,144.78333333,False
+GUY,328,Guyana,South America,Latin America & Caribbean,5,-59,True
+HKG,344,Hong Kong,Eastern Asia,East Asia & Pacific,22.267,114.188,False
+HMD,334,Heard Island and McDonald Islands,,Other,-53.1,72.51666666,False
+HND,340,Honduras,Central America,Latin America & Caribbean,15,-86.5,True
+HRV,191,Croatia,Southeast Europe,Europe & Central Asia,45.16666666,15.5,True
+HTI,332,Haiti,Caribbean,Latin America & Caribbean,19,-72.41666666,True
+HUN,348,Hungary,Central Europe,Europe & Central Asia,47,20,True
+IDN,360,Indonesia,South-Eastern Asia,East Asia & Pacific,-5,120,True
+IMN,833,Isle of Man,Northern Europe,Europe & Central Asia,54.25,-4.5,False
+IND,356,India,Southern Asia,South Asia,20,77,True
+IOT,086,British Indian Ocean Territory,Eastern Africa,Sub-Saharan Africa,-6,71.5,False
+IRL,372,Ireland,Northern Europe,Europe & Central Asia,53,-8,True
+IRN,364,Iran,Southern Asia,Middle East & North Africa,32,53,True
+IRQ,368,Iraq,Western Asia,Middle East & North Africa,33,44,True
+ISL,352,Iceland,Northern Europe,Europe & Central Asia,65,-18,True
+ISR,376,Israel,Western Asia,Middle East & North Africa,31.47,35.13,True
+ITA,380,Italy,Southern Europe,Europe & Central Asia,42.83333333,12.83333333,True
+JAM,388,Jamaica,Caribbean,Latin America & Caribbean,18.25,-77.5,True
+JEY,832,Jersey,Northern Europe,Europe & Central Asia,49.25,-2.16666666,False
+JOR,400,Jordan,Western Asia,Middle East & North Africa,31,36,True
+JPN,392,Japan,Eastern Asia,East Asia & Pacific,36,138,True
+KAZ,398,Kazakhstan,Central Asia,Europe & Central Asia,48,68,True
+KEN,404,Kenya,Eastern Africa,Sub-Saharan Africa,1,38,True
+KGZ,417,Kyrgyzstan,Central Asia,Europe & Central Asia,41,75,True
+KHM,116,Cambodia,South-Eastern Asia,East Asia & Pacific,13,105,True
+KIR,296,Kiribati,Micronesia,East Asia & Pacific,1.41666666,173,False
+KNA,659,Saint Kitts and Nevis,Caribbean,Latin America & Caribbean,17.33333333,-62.75,False
+KOR,410,South Korea,Eastern Asia,East Asia & Pacific,37,127.5,True
+KWT,414,Kuwait,Western Asia,Middle East & North Africa,29.5,45.75,True
+LAO,418,Laos,South-Eastern Asia,East Asia & Pacific,18,105,True
+LBN,422,Lebanon,Western Asia,Middle East & North Africa,33.83333333,35.83333333,True
+LBR,430,Liberia,Western Africa,Sub-Saharan Africa,6.5,-9.5,True
+LBY,434,Libya,Northern Africa,Middle East & North Africa,25,17,True
+LCA,662,Saint Lucia,Caribbean,Latin America & Caribbean,13.88333333,-60.96666666,False
+LIE,438,Liechtenstein,Western Europe,Europe & Central Asia,47.26666666,9.53333333,False
+LKA,144,Sri Lanka,Southern Asia,South Asia,7,81,True
+LSO,426,Lesotho,Southern Africa,Sub-Saharan Africa,-29.5,28.5,True
+LTU,440,Lithuania,Northern Europe,Europe & Central Asia,56,24,True
+LUX,442,Luxembourg,Western Europe,Europe & Central Asia,49.75,6.16666666,True
+LVA,428,Latvia,Northern Europe,Europe & Central Asia,57,25,True
+MAC,446,Macau,Eastern Asia,East Asia & Pacific,22.16666666,113.55,False
+MAF,663,Saint Martin,Caribbean,Latin America & Caribbean,18.08333333,-63.95,False
+MAR,504,Morocco,Northern Africa,Middle East & North Africa,32,-5,True
+MCO,492,Monaco,Western Europe,Europe & Central Asia,43.73333333,7.4,False
+MDA,498,Moldova,Eastern Europe,Europe & Central Asia,47,29,True
+MDG,450,Madagascar,Eastern Africa,Sub-Saharan Africa,-20,47,True
+MDV,462,Maldives,Southern Asia,South Asia,3.25,73,False
+MEX,484,Mexico,North America,Latin America & Caribbean,23,-102,True
+MHL,584,Marshall Islands,Micronesia,East Asia & Pacific,9,168,False
+MKD,807,North Macedonia,Southeast Europe,Europe & Central Asia,41.83333333,22,True
+MLI,466,Mali,Western Africa,Sub-Saharan Africa,17,-4,True
+MLT,470,Malta,Southern Europe,Europe & Central Asia,35.83333333,14.58333333,False
+MMR,104,Myanmar,South-Eastern Asia,East Asia & Pacific,22,98,True
+MNE,499,Montenegro,Southeast Europe,Europe & Central Asia,42.5,19.3,True
+MNG,496,Mongolia,Eastern Asia,East Asia & Pacific,46,105,True
+MNP,580,Northern Mariana Islands,Micronesia,East Asia & Pacific,15.2,145.75,False
+MOZ,508,Mozambique,Eastern Africa,Sub-Saharan Africa,-18.25,35,True
+MRT,478,Mauritania,Western Africa,Sub-Saharan Africa,20,-12,True
+MSR,500,Montserrat,Caribbean,Latin America & Caribbean,16.75,-62.2,False
+MTQ,474,Martinique,Caribbean,Latin America & Caribbean,14.666667,-61,False
+MUS,480,Mauritius,Eastern Africa,Sub-Saharan Africa,-20.28333333,57.55,False
+MWI,454,Malawi,Eastern Africa,Sub-Saharan Africa,-13.5,34,True
+MYS,458,Malaysia,South-Eastern Asia,East Asia & Pacific,2.5,112.5,True
+MYT,175,Mayotte,Eastern Africa,Sub-Saharan Africa,-12.83333333,45.16666666,False
+NAM,516,Namibia,Southern Africa,Sub-Saharan Africa,-22,17,True
+NCL,540,New Caledonia,Melanesia,East Asia & Pacific,-21.5,165.5,True
+NER,562,Niger,Western Africa,Sub-Saharan Africa,16,8,True
+NFK,574,Norfolk Island,Australia and New Zealand,East Asia & Pacific,-29.03333333,167.95,False
+NGA,566,Nigeria,Western Africa,Sub-Saharan Africa,10,8,True
+NIC,558,Nicaragua,Central America,Latin America & Caribbean,13,-85,True
+NIU,570,Niue,Polynesia,East Asia & Pacific,-19.03333333,-169.86666666,False
+NLD,528,Netherlands,Western Europe,Europe & Central Asia,52.5,5.75,True
+NOR,578,Norway,Northern Europe,Europe & Central Asia,62,10,True
+NPL,524,Nepal,Southern Asia,South Asia,28,84,True
+NRU,520,Nauru,Micronesia,East Asia & Pacific,-0.53333333,166.91666666,False
+NZL,554,New Zealand,Australia and New Zealand,East Asia & Pacific,-41,174,True
+OMN,512,Oman,Western Asia,Middle East & North Africa,21,57,True
+PAK,586,Pakistan,Southern Asia,South Asia,30,70,True
+PAN,591,Panama,Central America,Latin America & Caribbean,9,-80,True
+PCN,612,Pitcairn Islands,Polynesia,East Asia & Pacific,-25.06666666,-130.1,False
+PER,604,Peru,South America,Latin America & Caribbean,-10,-76,True
+PHL,608,Philippines,South-Eastern Asia,East Asia & Pacific,13,122,True
+PLW,585,Palau,Micronesia,East Asia & Pacific,7.5,134.5,False
+PNG,598,Papua New Guinea,Melanesia,East Asia & Pacific,-6,147,True
+POL,616,Poland,Central Europe,Europe & Central Asia,52,20,True
+PRI,630,Puerto Rico,Caribbean,Latin America & Caribbean,18.25,-66.5,True
+PRK,408,North Korea,Eastern Asia,East Asia & Pacific,40,127,True
+PRT,620,Portugal,Southern Europe,Europe & Central Asia,39.5,-8,True
+PRY,600,Paraguay,South America,Latin America & Caribbean,-23,-58,True
+PSE,275,Palestine,Western Asia,Middle East & North Africa,31.9,35.2,True
+PYF,258,French Polynesia,Polynesia,East Asia & Pacific,-15,-140,False
+QAT,634,Qatar,Western Asia,Middle East & North Africa,25.5,51.25,True
+REU,638,Réunion,Eastern Africa,Sub-Saharan Africa,-21.15,55.5,False
+ROU,642,Romania,Southeast Europe,Europe & Central Asia,46,25,True
+RUS,643,Russia,Eastern Europe,Europe & Central Asia,60,100,True
+RWA,646,Rwanda,Eastern Africa,Sub-Saharan Africa,-2,30,True
+SAU,682,Saudi Arabia,Western Asia,Middle East & North Africa,25,45,True
+SDN,729,Sudan,Northern Africa,Middle East & North Africa,15,30,True
+SEN,686,Senegal,Western Africa,Sub-Saharan Africa,14,-14,True
+SGP,702,Singapore,South-Eastern Asia,East Asia & Pacific,1.36666666,103.8,False
+SGS,239,South Georgia,,Other,-54.5,-37,False
+SHN,654,"Saint Helena, Ascension and Tristan da Cunha",Western Africa,Sub-Saharan Africa,-15.95,-5.72,False
+SJM,744,Svalbard and Jan Mayen,Northern Europe,Europe & Central Asia,78,20,False
+SLB,090,Solomon Islands,Melanesia,East Asia & Pacific,-8,159,True
+SLE,694,Sierra Leone,Western Africa,Sub-Saharan Africa,8.5,-11.5,True
+SLV,222,El Salvador,Central America,Latin America & Caribbean,13.83333333,-88.91666666,True
+SMR,674,San Marino,Southern Europe,Europe & Central Asia,43.76666666,12.41666666,False
+SOM,706,Somalia,Eastern Africa,Sub-Saharan Africa,10,49,True
+SPM,666,Saint Pierre and Miquelon,North America,North America,46.83333333,-56.33333333,False
+SRB,688,Serbia,Southeast Europe,Europe & Central Asia,44,21,True
+SSD,728,South Sudan,Middle Africa,Sub-Saharan Africa,7,30,True
+STP,678,São Tomé and Príncipe,Middle Africa,Sub-Saharan Africa,1,7,False
+SUR,740,Suriname,South America,Latin America & Caribbean,4,-56,True
+SVK,703,Slovakia,Central Europe,Europe & Central Asia,48.66666666,19.5,True
+SVN,705,Slovenia,Central Europe,Europe & Central Asia,46.11666666,14.81666666,True
+SWE,752,Sweden,Northern Europe,Europe & Central Asia,62,15,True
+SWZ,748,Eswatini,Southern Africa,Sub-Saharan Africa,-26.5,31.5,True
+SXM,534,Sint Maarten,Caribbean,Latin America & Caribbean,18.033333,-63.05,False
+SYC,690,Seychelles,Eastern Africa,Sub-Saharan Africa,-4.58333333,55.66666666,False
+SYR,760,Syria,Western Asia,Middle East & North Africa,35,38,True
+TCA,796,Turks and Caicos Islands,Caribbean,Latin America & Caribbean,21.75,-71.58333333,False
+TCD,148,Chad,Middle Africa,Sub-Saharan Africa,15,19,True
+TGO,768,Togo,Western Africa,Sub-Saharan Africa,8,1.16666666,True
+THA,764,Thailand,South-Eastern Asia,East Asia & Pacific,15,100,True
+TJK,762,Tajikistan,Central Asia,Europe & Central Asia,39,71,True
+TKL,772,Tokelau,Polynesia,East Asia & Pacific,-9,-172,False
+TKM,795,Turkmenistan,Central Asia,Europe & Central Asia,40,60,True
+TLS,626,Timor-Leste,South-Eastern Asia,East Asia & Pacific,-8.83333333,125.91666666,True
+TON,776,Tonga,Polynesia,East Asia & Pacific,-20,-175,False
+TTO,780,Trinidad and Tobago,Caribbean,Latin America & Caribbean,11,-61,True
+TUN,788,Tunisia,Northern Africa,Middle East & North Africa,34,9,True
+TUR,792,Türkiye,Western Asia,Europe & Central Asia,39,35,True
+TUV,798,Tuvalu,Polynesia,East Asia & Pacific,-8,178,False
+TWN,158,Taiwan,Eastern Asia,East Asia & Pacific,23.5,121,True
+TZA,834,Tanzania,Eastern Africa,Sub-Saharan Africa,-6,35,True
+UGA,800,Uganda,Eastern Africa,Sub-Saharan Africa,1,32,True
+UKR,804,Ukraine,Eastern Europe,Europe & Central Asia,49,32,True
+UMI,581,United States Minor Outlying Islands,North America,North America,19.3,166.633333,False
+UNK,,Kosovo,Southeast Europe,Europe & Central Asia,42.666667,21.166667,False
+URY,858,Uruguay,South America,Latin America & Caribbean,-33,-56,True
+USA,840,United States,North America,North America,38,-97,True
+UZB,860,Uzbekistan,Central Asia,Europe & Central Asia,41,64,True
+VAT,336,Vatican City,Southern Europe,Europe & Central Asia,41.9,12.45,False
+VCT,670,Saint Vincent and the Grenadines,Caribbean,Latin America & Caribbean,13.25,-61.2,False
+VEN,862,Venezuela,South America,Latin America & Caribbean,8,-66,True
+VGB,092,British Virgin Islands,Caribbean,Latin America & Caribbean,18.431383,-64.62305,False
+VIR,850,United States Virgin Islands,Caribbean,Latin America & Caribbean,18.35,-64.933333,False
+VNM,704,Vietnam,South-Eastern Asia,East Asia & Pacific,16.16666666,107.83333333,True
+VUT,548,Vanuatu,Melanesia,East Asia & Pacific,-16,167,True
+WLF,876,Wallis and Futuna,Polynesia,East Asia & Pacific,-13.3,-176.2,False
+WSM,882,Samoa,Polynesia,East Asia & Pacific,-13.58333333,-172.33333333,False
+YEM,887,Yemen,Western Asia,Middle East & North Africa,15,48,True
+ZAF,710,South Africa,Southern Africa,Sub-Saharan Africa,-29,24,True
+ZMB,894,Zambia,Eastern Africa,Sub-Saharan Africa,-15,30,True
+ZWE,716,Zimbabwe,Eastern Africa,Sub-Saharan Africa,-20,30,True

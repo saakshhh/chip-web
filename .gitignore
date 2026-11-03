@@ -1,0 +1,18 @@
+# Raw BACI download: far too large for GitHub. Keep it outside the repo.
+BACI_*/
+BACI_*.zip
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editors and OS
+.DS_Store
+.vscode/
+.idea/
+
+# Intermediate pipeline output, if you write any
+pipeline/tmp/
