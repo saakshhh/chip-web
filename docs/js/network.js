@@ -162,7 +162,7 @@ function taperedArc([x1, y1], [x2, y2], startWidth, endWidth) {
     const taper = Math.pow(1 - t, 1.5);
     //const halfWidth = (endWidth / 2) + ((startWidth - endWidth) / 2) * taper;
     // const halfWidth = (endWidth / 2) + ((startWidth - endWidth) / 2) * taper;
-    const halfWidth = (startWidth / 2) * (1 - t);
+    const halfWidth = Math.max(0.4, (startWidth / 2) * (1 - 0.85 * t));
 
     left.push([x + nx * halfWidth, y + ny * halfWidth]);
     right.push([x - nx * halfWidth, y - ny * halfWidth]);
@@ -340,11 +340,9 @@ function draw() {
 
 
   })
-  // Use the existing CSS stroke colors as the new fill colors.
-  .style("fill", function() {
-    const color = d3.select(this).style("stroke");
-    return color && color !== "none" ? color : "#64748b";
-  })
+  // Color each flow by its kind (imports blue, exports orange), matching the CSS variables.
+  .style("fill", f => f.kind === "imports" ? "var(--imports)"
+                   : f.kind === "exports" ? "var(--exports)" : "#94a3b8")
   .style("stroke", "none")
   .call(s => s.selectAll("title").data(f => [f]).join("title")
     .text(f => `${data.countryName(f.e)} → ${data.countryName(f.i)}: ${data.money(f.v)}`))
