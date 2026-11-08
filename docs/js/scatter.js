@@ -80,7 +80,11 @@ export function init(el) {
   dots = svg.append("g");
 
   draw();
-  ["yearChanged", "productChanged"].forEach(e => on(e, draw));
+  ["yearChanged", "productChanged"].forEach(e => on(e, () => {
+  setBrushed([]);
+  draw();
+  }));
+
   ["countrySelected", "brushChanged"].forEach(e => on(e, highlight));
 }
 
