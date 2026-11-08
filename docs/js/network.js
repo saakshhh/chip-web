@@ -9,12 +9,19 @@
 //      each centroid + forceCollide using each country's largest radius over all years), then
 //      freeze the positions so nodes never move between years (stable mental map). 
 //   2. [DONE] Labels: avoid overlaps; show the rest on hover.
-//   3. [IN PROGRESS] Tapered edges (wide at the exporter, narrow at the importer) instead of plain arcs.
-//        Works right now, but in full zoom out some of the taper dissapears before actualling connecting the nodes
-//        You can see the full path if you zoom in, but will experiment more. 
-//   4. Smooth transitions between years for edges, not just nodes.
-//   5. Zoom and pan (d3.zoom), keeping node sizes readable when zoomed.
+//   3. [DONE] Tapered edges (wide at the exporter, narrow at the importer) instead of plain arcs.
+//   4. [DONE ?] Smooth transitions between years for edges, not just nodes.
+//          Implemented fade in and out for each individual flow. Matches flow through importer/exporter
+//          Speed of fade can be adjusted in the draw() function
+//   5. [IN PROGRESS] Zoom and pan (d3.zoom), keeping node sizes readable when zoomed.
+//          Zoom in and pan is implemented.
+//          No current resizing of nodes and labels
 //   6. Proper legend for circle size and line width.
+//
+// Extra implemenetations : 
+//   1. Product-specific node positioning: Recalculate country positions and collision spacing when 
+//          switching between HS 8541 and HS 8542.
+
 
 import { state, on, setCountry } from "./state.js";
 import * as data from "./data.js";
@@ -24,7 +31,7 @@ const TOP_N = 60;          // flows drawn in the global view
 const TOP_PARTNERS = 8;    // suppliers and customers drawn when a country is selected
 const LABELS = 8;          // biggest exporters that get a label
 
-let svg, pos, layers = {};
+let svg, pos, projection, layers = {};
 let visibleLabels = new Set();
 const sizeDomain = {};     // product -> largest exports in any year, so sizes are comparable across years
 
@@ -32,20 +39,51 @@ export function init(el) {
   const core = data.getCore();
   el.innerHTML = `<h2>Trade network</h2>
     <p class="hint">Circles are countries, sized by chip exports. Lines are the year's largest flows.
-    Click a country to see its suppliers (blue) and customers (orange).</p>`;
+    Scroll to zoom, drag to pan, and double-click to reset the view. Click a country to see its suppliers (blue) and customers (orange).</p>`;
 
+  // svg = d3.select(el).append("svg")
+  //   .attr("viewBox", `0 0 ${W} ${H}`)
+  //   .attr("role", "img")
+  //   .attr("aria-label", "World map of chip trade flows");
+
+  // // Pacific-centered so the East Asia hubs and the Americas aren't split by the map edge.
+  // const projection = d3.geoEqualEarth().rotate([-150, 0]).fitExtent([[8, 8], [W - 8, H - 8]], { type: "Sphere" });
+  // const path = d3.geoPath(projection);
+
+  // svg.append("path").attr("class", "net-sphere").attr("d", path({ type: "Sphere" }))
+  //   .on("click", () => setCountry(null));
+  // svg.append("g").selectAll("path")
+  //   .data(topojson.feature(core.world, core.world.objects.countries).features)
+  //   .join("path").attr("class", "net-country").attr("d", path)
+  //   .on("click", () => setCountry(null));
+
+  // // pos = new Map(core.countries.filter(c => c.lat != null).map(c => [c.c, projection([c.lon, c.lat])]));
+  // pos = calculatePositions(core, projection, state.product);
+
+  // layers.flows = svg.append("g");
+  // layers.nodes = svg.append("g");
+  // layers.labels = svg.append("g");
+  // layers.hover = svg.append("g");
+  // layers.legend = svg.append("g").attr("class", "net-legend").attr("transform", `translate(16, ${H - 16})`);
+
+  
   svg = d3.select(el).append("svg")
     .attr("viewBox", `0 0 ${W} ${H}`)
     .attr("role", "img")
     .attr("aria-label", "World map of chip trade flows");
 
+  // Shared group: everything that should zoom and pan together.
+  layers.map = svg.append("g").attr("class", "net-map");
+
   // Pacific-centered so the East Asia hubs and the Americas aren't split by the map edge.
-  const projection = d3.geoEqualEarth().rotate([-150, 0]).fitExtent([[8, 8], [W - 8, H - 8]], { type: "Sphere" });
+  // const projection = d3.geoEqualEarth().rotate([-150, 0]).fitExtent([[8, 8], [W - 8, H - 8]], { type: "Sphere" });
+  projection = d3.geoEqualEarth().rotate([-150, 0]).fitExtent([[8, 8], [W - 8, H - 8]], { type: "Sphere" });
   const path = d3.geoPath(projection);
 
-  svg.append("path").attr("class", "net-sphere").attr("d", path({ type: "Sphere" }))
+  layers.map.append("path").attr("class", "net-sphere").attr("d", path({ type: "Sphere" }))
     .on("click", () => setCountry(null));
-  svg.append("g").selectAll("path")
+
+  layers.map.append("g").selectAll("path")
     .data(topojson.feature(core.world, core.world.objects.countries).features)
     .join("path").attr("class", "net-country").attr("d", path)
     .on("click", () => setCountry(null));
@@ -53,14 +91,46 @@ export function init(el) {
   // pos = new Map(core.countries.filter(c => c.lat != null).map(c => [c.c, projection([c.lon, c.lat])]));
   pos = calculatePositions(core, projection, state.product);
 
-  layers.flows = svg.append("g");
-  layers.nodes = svg.append("g");
-  layers.labels = svg.append("g");
-  layers.hover = svg.append("g");
-  layers.legend = svg.append("g").attr("class", "net-legend").attr("transform", `translate(16, ${H - 16})`);
+  layers.flows = layers.map.append("g");
+  layers.nodes = layers.map.append("g");
+  layers.labels = layers.map.append("g");
+  layers.hover = layers.map.append("g");
+
+  // Keep the legend outside the zoomable group.
+  layers.legend = svg.append("g")
+    .attr("class", "net-legend")
+    .attr("transform", `translate(16, ${H - 16})`);
+
+  // Zoom and pan behavior.
+  const zoom = d3.zoom()
+    .scaleExtent([1, 8])
+    .extent([[0, 0], [W, H]])
+    .filter(event =>
+      (!event.ctrlKey || event.type === "wheel") &&
+      !event.button &&
+      !event.target.closest(".net-legend")
+    )
+    .on("zoom", event => {
+      layers.map.attr("transform", event.transform);
+    });
+
+  svg.call(zoom)
+  .on("dblclick.zoom", () => {
+    svg.transition()
+      .duration(500)
+      .call(zoom.transform, d3.zoomIdentity);
+  });
+
 
   draw();
-  ["yearChanged", "productChanged", "countrySelected", "brushChanged"].forEach(e => on(e, draw));
+  // ["yearChanged", "productChanged", "countrySelected", "brushChanged"].forEach(e => on(e, draw));
+  on("productChanged", () => {
+    pos = calculatePositions(core, projection, state.product);
+    draw();
+  });
+  
+  ["yearChanged", "countrySelected", "brushChanged"].forEach(e => on(e, draw));
+
 }
 
 
@@ -294,6 +364,8 @@ function maxExports(p) {
 
 function draw() {
   const { product: p, year: y, country: sel, brushed } = state;
+
+  //CHANGING SECOND NUMBER CHANGES SPEED OF FADE
   const t = svg.transition().duration(state.playing ? 300 : 500);
 
   // Flows: the global top list, or the selected country's partners.
@@ -309,46 +381,38 @@ function draw() {
   flows = flows.filter(f => pos.has(f.e) && pos.has(f.i));
   const width = d3.scaleSqrt([0, d3.max(globalTop, f => f.v) || 1], [0.6, 10]);
 
-  // layers.flows.selectAll("path")
-  //   .data(flows, f => `${f.e}>${f.i}`)
-  //   .join(enter => enter.append("path").attr("stroke-width", 0))
-  //   .attr("class", f => `net-flow ${f.kind}`)
-  //   .attr("d", f => arc(pos.get(f.e), pos.get(f.i)))
-  //   .call(s => s.selectAll("title").data(f => [f]).join("title")
-  //     .text(f => `${data.countryName(f.e)} → ${data.countryName(f.i)}: ${data.money(f.v)}`))
-  //   .transition(t).attr("stroke-width", f => width(f.v));
-
-
+  
   layers.flows.selectAll("path")
   .data(flows, f => `${f.e}>${f.i}`)
-  .join(enter => enter.append("path").attr("opacity", 0))
+  .join(
+    enter => enter.append("path")
+      .attr("opacity", 0)
+      .attr("d", f => {
+        const w = width(f.v);
+        return taperedArc(pos.get(f.e), pos.get(f.i), w, 0);
+      }),
+
+    update => update,
+
+    exit => exit
+      .transition(t)
+      .style("opacity", 0)
+      .remove()
+  )
   .attr("class", f => `net-flow ${f.kind}`)
-  .attr("d", f => {
-    const w = width(f.v);
-
-    // return taperedArc(
-    //   pos.get(f.e),
-    //   pos.get(f.i),
-    //   w,
-    //   // Math.max(0.8, w * 0.15)
-    //   Math.max(0.2, w * 0.02)
-    // );
-
-    // return taperedArc(pos.get(f.e), pos.get(f.i), w, 0.05);
-
-    return taperedArc(pos.get(f.e), pos.get(f.i), w, 0);
-
-
-  })
-  // Color each flow by its kind (imports blue, exports orange), matching the CSS variables.
   .style("fill", f => f.kind === "imports" ? "var(--imports)"
-                   : f.kind === "exports" ? "var(--exports)" : "#94a3b8")
+                 : f.kind === "exports" ? "var(--exports)" : "#94a3b8")
   .style("stroke", "none")
-  .call(s => s.selectAll("title").data(f => [f]).join("title")
+  .call(s => s.selectAll("title")
+    .data(f => [f])
+    .join("title")
     .text(f => `${data.countryName(f.e)} → ${data.countryName(f.i)}: ${data.money(f.v)}`))
   .transition(t)
+  .attr("d", f => {
+    const w = width(f.v);
+    return taperedArc(pos.get(f.e), pos.get(f.i), w, 0);
+  })
   .style("opacity", 0.85);
-
 
 
   // Nodes: every country with a position that exported this year.
@@ -378,15 +442,6 @@ function draw() {
                  `Exports ${data.money(e.exports)} · rank ${e.rank} · top supplier for ${e.top_supplier_of} countries`))
     .transition(t).attr("r", e => r(e.exports));
 
-  // Labels: the biggest exporters, plus the selected country.
-  // const labelled = exporters.slice().sort((a, b) => b.exports - a.exports).slice(0, LABELS).map(e => e.c);
-  // if (sel && pos.has(sel) && !labelled.includes(sel)) labelled.push(sel);
-  // layers.labels.selectAll("text")
-  //   .data(labelled, c => c)
-  //   .join("text")
-  //   .attr("class", c => `net-label${sel && c !== sel && !partners.has(c) ? " faded" : ""}`)
-  //   .attr("x", c => pos.get(c)[0] + 7).attr("y", c => pos.get(c)[1] - 7)
-  //   .text(c => data.countryName(c));
   
   // Labels: biggest exporters, plus the selected country.
   const labelled = exporters
