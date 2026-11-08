@@ -341,4 +341,4 @@ function drawHistory(countryCode, product, selectedYear) {
       "shares outside that list are included in Other suppliers. " +
       "A missing colored band does not imply zero trade. Missing years appear as gaps."
     );
-}q
+}
