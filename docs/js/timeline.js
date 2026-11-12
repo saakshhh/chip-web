@@ -48,6 +48,10 @@ export function init(el) {
   drawYear();
   on("productChanged", drawSeries);
   on("yearChanged", drawYear);
+
+  // Pause playback when the user interacts with another view
+  ["countrySelected", "brushChanged", "productChanged"].forEach(e => on(e, stop));
+  on("playingChanged", s => { if (!s.playing) stop(); });
 }
 
 function drawSeries() {
