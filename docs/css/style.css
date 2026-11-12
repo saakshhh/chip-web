@@ -69,6 +69,7 @@ body.loading .loading-message { display: grid; }
 .tl-controls input[type=range] { flex: 1; }
 .tl-controls button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 4px 12px; cursor: pointer; }
 .tl-year { font-weight: 700; min-width: 3.2em; }
+.tl-adjusted { display: flex; gap: 6px; align-items: center; color: var(--quiet);}
 .tl-line { fill: none; stroke: var(--accent); stroke-width: 2; }
 .tl-axis text { fill: var(--quiet); }
 .tl-event line { stroke: var(--event); stroke-dasharray: 3 3; }
