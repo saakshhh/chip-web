@@ -1,10 +1,4 @@
 // Timeline: world chip trade over time, event markers, year slider and playback. Owner: Thomas.
-//
-// TODO (Thomas):
-//   1. Toggle between current and constant 2024 dollars (data.toReal / world_trade v_real).
-//   2. Better event labels (avoid overlaps when two events share a year, e.g. 2022).
-//   3. Brush a range of years to compare two periods.
-//   4. Tune playback speed; pause when the user interacts with another view.
 
 import { state, on, setYear, setPlaying } from "./state.js";
 import * as data from "./data.js";
@@ -12,8 +6,8 @@ import * as data from "./data.js";
 const W = 1000, H = 226, M = { top: 52, right: 20, bottom: 42, left: 56 };
 let svg, x, y, line, slider, yearLabel, playButton, timer = null;
 
-// Which dollars the chart shows: "nominal" (current dollars, field v) or "real" (constant
-// base-year dollars, field v_real)
+// Inflation setting. false: values as recorded (field v, current dollars).
+// true: inflation-adjusted (field v_real, constant base-year dollars).
 let adjusted = false;
 const value = d => (adjusted ? d.v_real : d.v);
 
@@ -27,7 +21,7 @@ let periods = [];
 let compareEl;
 
 export function init(el) {
-  const yrs = data.years();
+  const yrs = data.years(), base = data.getCore().meta.base_year;
   el.innerHTML = `<h2>World chip trade over time</h2>
     <div class="tl-controls">
       <div class="tl-buttons">
@@ -41,8 +35,8 @@ export function init(el) {
       </div>
       <input type="range" id="tl-slider" min="${yrs[0]}" max="${yrs.at(-1)}" step="1" value="${state.year}" aria-label="Year">
       <span class="tl-year" id="tl-year">${state.year}</span>
-      <label class="tl-adjusted" title="Converts each year to ${data.getCore().meta.base_year} dollars using U.S. consumer prices (CPI)">
-        <input type="checkbox" id="tl-adjusted"> Adjust for inflation (${data.getCore().meta.base_year} $)
+      <label class="tl-adjusted" title="Converts each year to ${base} dollars using U.S. consumer prices (CPI)">
+        <input type="checkbox" id="tl-adjusted"> Adjust for inflation (${base} $)
       </label>
     </div>
     <div class="tl-compare" id="tl-compare"></div>`;
@@ -89,7 +83,11 @@ export function init(el) {
     .on("end", ({ selection, sourceEvent }) => {
       if (!sourceEvent) return;
       stop();
-      if (!selection) return setYear(Math.round(x.invert(d3.pointer(sourceEvent, svg.node())[0])));
+      if (!selection) {   // a click or tap without dragging: jump to that year
+        const pt = sourceEvent.changedTouches?.[0] ?? sourceEvent;
+        const yr = Math.round(x.invert(d3.pointer(pt, svg.node())[0]));
+        return setYear(Math.max(yrs[0], Math.min(yrs.at(-1), yr)));
+      }
       const period = selection.map(px => Math.round(x.invert(px)));   // snaps to whatever closest whole year
       periods = periods.length === 2 ? [period] : [...periods, period];
       svg.select(".tl-brush").call(brush.move, null);   // hide the drag box; the shaded period replaces it
@@ -98,6 +96,7 @@ export function init(el) {
   svg.append("g").attr("class", "tl-brush").call(brush);
 
   drawSeries();
+  drawEvents();
   drawYear();
   on("productChanged", drawSeries);
   on("yearChanged", drawYear);
@@ -113,9 +112,10 @@ function drawSeries() {
   svg.select(".tl-y").transition().duration(400)
     .call(d3.axisLeft(y).ticks(4).tickFormat(v => data.money(v)));
   svg.select(".tl-line").datum(series).transition().duration(400).attr("d", line);
-  drawPeriods(); 
+  drawPeriods();   // the averages depend on the product and the inflation setting
+}
 
-  // One marker per year, multiple events are seperated by \n
+function drawEvents() {
   const groups = layoutEvents(data.getCore().events);
   svg.select(".tl-events").selectAll("g.tl-event").data(groups, d => d.year).join(enter => {
     const g = enter.append("g");
@@ -133,7 +133,7 @@ function drawSeries() {
     .call(g => g.select("title").text(d => [d.year, ...d.events.map(e => `${e.label}: ${e.detail}`)].join("\n")));
 }
 
-// Events alternate between height at top to seperate.
+// Event years alternate between a high and a low row so neighbouring labels don't collide.
 const TIER_H = 16;   // how much lower the alternating years sit (2nd, 4th... event year)
 const STACK_H = 12;  // gap between labels in the same year (e.g. the two 2022 labels)
 function layoutEvents(events) {

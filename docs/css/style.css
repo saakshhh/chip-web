@@ -65,13 +65,13 @@ body.loading .loading-message { display: grid; }
 .net-legend text { font-size: 11px; fill: var(--quiet); }
 
 /* ---------- Timeline (Thomas) ---------- */
-.tl-controls { display: flex; gap: 12px; align-items: center; margin-bottom: 4px; }
+.tl-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 4px; }
 .tl-controls input[type=range] { flex: 1; }
 .tl-buttons { display: flex; flex-direction: column; gap: 4px; }
 .tl-controls button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 4px 12px; cursor: pointer; }
 .tl-controls select { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 3px 4px; cursor: pointer; }
 .tl-year { font-weight: 700; min-width: 3.2em; }
-.tl-adjusted { display: flex; gap: 6px; align-items: center; color: var(--quiet);}
+.tl-adjusted { display: flex; gap: 6px; align-items: center; color: var(--quiet); }
 .tl-line { fill: none; stroke: var(--accent); stroke-width: 2; }
 .tl-axis text { fill: var(--quiet); }
 .tl-event line { stroke: var(--event); stroke-dasharray: 3 3; }
