@@ -9,12 +9,27 @@
 //      each centroid + forceCollide using each country's largest radius over all years), then
 //      freeze the positions so nodes never move between years (stable mental map). 
 //   2. [DONE] Labels: avoid overlaps; show the rest on hover.
-//   3. [IN PROGRESS] Tapered edges (wide at the exporter, narrow at the importer) instead of plain arcs.
-//        Works right now, but in full zoom out some of the taper dissapears before actualling connecting the nodes
-//        You can see the full path if you zoom in, but will experiment more. 
-//   4. Smooth transitions between years for edges, not just nodes.
-//   5. Zoom and pan (d3.zoom), keeping node sizes readable when zoomed.
-//   6. Proper legend for circle size and line width.
+//   3. [DONE] Tapered edges (wide at the exporter, narrow at the importer) instead of plain arcs.
+//   4. [DONE] Smooth transitions between years for edges, not just nodes.
+//          Speed of fade can be adjusted in the draw() function
+//   5. [DONE] Zoom and pan (d3.zoom), keeping node sizes readable when zoomed.
+//          See notes in extra implementations for things to consider
+//   6. [DONE] Proper legend for circle size and line width.
+//   
+//
+//   7. [ADDITIONAL TODO] Current outline of the nodes (either white or dotted black) does not resize
+//          Need to handle that
+
+//
+// Extra implementations : 
+//   1. Product-specific node positioning: Recalculate country positions and collision spacing when 
+//          switching between HS 8541 and HS 8542.
+//   2. Label placement ran into some issues when looking at zooming in, specifically for the South Korea and Japan labels
+//          they would attempt to not overlap and actually switch places such that SK's label was closer to Japan and 
+//          Japan's label was closer to SK. I implemented a new scoring function for label placement, and so it 
+//          tries very hard to not overlap with other labels and nodes, but it changes the behavior of a few countries.
+//          I believe my current implementation is the best tradeoff for reducing overlap while maintaining distance
+
 
 import { state, on, setCountry } from "./state.js";
 import * as data from "./data.js";
@@ -24,28 +39,92 @@ const TOP_N = 60;          // flows drawn in the global view
 const TOP_PARTNERS = 8;    // suppliers and customers drawn when a country is selected
 const LABELS = 8;          // biggest exporters that get a label
 
-let svg, pos, layers = {};
+let svg, pos, projection, layers = {};
 let visibleLabels = new Set();
+let zoomScale = 1;
 const sizeDomain = {};     // product -> largest exports in any year, so sizes are comparable across years
+
+// counter-scale labels so they remain readable at different zoom levels.
+function counterScaleText(selection) {
+  selection.attr("transform", function() {
+    const x = +this.getAttribute("x") || 0;
+    const y = +this.getAttribute("y") || 0;
+    const nodeX = +this.getAttribute("data-node-x");
+    const nodeY = +this.getAttribute("data-node-y");
+    const scale = 1 / zoomScale;
+
+    const adjustedX = nodeX + (x - nodeX) * scale;
+    const adjustedY = nodeY + (y - nodeY) * scale;
+
+    return `translate(${adjustedX},${adjustedY})
+            scale(${scale})
+            translate(${-x},${-y})`;
+  });
+}
+
+//keep nodes and labels at approximately constant screen size.
+function applyCounterScale() {
+  layers.nodes.selectAll("circle")
+    .attr("r", function() {
+      return +this.getAttribute("data-base-r") / zoomScale;
+    });
+
+  counterScaleText(layers.labels.selectAll("text"));
+  counterScaleText(layers.hover.selectAll("text"));
+}
+
+
+function counterScaleEdges() {
+  const paths = layers.flows.selectAll("path");
+
+  // Remove paths already fading out.
+  paths.filter(function() {
+    return this.getAttribute("data-exiting") === "true";
+  })
+    .interrupt()
+    .remove();
+
+  // Finish active flows immediately at their zoom-corrected widths.
+  layers.flows.selectAll("path")
+    .interrupt()
+    .style("opacity", 0.85)
+    .attr("d", function(f) {
+      const baseWidth = +this.getAttribute("data-base-width");
+
+      return taperedArc(
+        pos.get(f.e),
+        pos.get(f.i),
+        baseWidth / zoomScale,
+        0,
+        0.4 / zoomScale
+      );
+    });
+}
 
 export function init(el) {
   const core = data.getCore();
   el.innerHTML = `<h2>Trade network</h2>
     <p class="hint">Circles are countries, sized by chip exports. Lines are the year's largest flows.
-    Click a country to see its suppliers (blue) and customers (orange).</p>`;
+    Scroll to zoom, drag to pan, and double-click to reset the view. Click a country to see its suppliers (blue) and customers (orange).</p>`;
 
+  
   svg = d3.select(el).append("svg")
     .attr("viewBox", `0 0 ${W} ${H}`)
     .attr("role", "img")
     .attr("aria-label", "World map of chip trade flows");
 
+  // Shared group: everything that should zoom and pan together.
+  layers.map = svg.append("g").attr("class", "net-map");
+
   // Pacific-centered so the East Asia hubs and the Americas aren't split by the map edge.
-  const projection = d3.geoEqualEarth().rotate([-150, 0]).fitExtent([[8, 8], [W - 8, H - 8]], { type: "Sphere" });
+  // const projection = d3.geoEqualEarth().rotate([-150, 0]).fitExtent([[8, 8], [W - 8, H - 8]], { type: "Sphere" });
+  projection = d3.geoEqualEarth().rotate([-150, 0]).fitExtent([[8, 8], [W - 8, H - 8]], { type: "Sphere" });
   const path = d3.geoPath(projection);
 
-  svg.append("path").attr("class", "net-sphere").attr("d", path({ type: "Sphere" }))
+  layers.map.append("path").attr("class", "net-sphere").attr("d", path({ type: "Sphere" }))
     .on("click", () => setCountry(null));
-  svg.append("g").selectAll("path")
+
+  layers.map.append("g").selectAll("path")
     .data(topojson.feature(core.world, core.world.objects.countries).features)
     .join("path").attr("class", "net-country").attr("d", path)
     .on("click", () => setCountry(null));
@@ -53,14 +132,164 @@ export function init(el) {
   // pos = new Map(core.countries.filter(c => c.lat != null).map(c => [c.c, projection([c.lon, c.lat])]));
   pos = calculatePositions(core, projection, state.product);
 
-  layers.flows = svg.append("g");
-  layers.nodes = svg.append("g");
-  layers.labels = svg.append("g");
-  layers.hover = svg.append("g");
-  layers.legend = svg.append("g").attr("class", "net-legend").attr("transform", `translate(16, ${H - 16})`);
+  layers.flows = layers.map.append("g");
+  layers.nodes = layers.map.append("g");
+  layers.labels = layers.map.append("g");
+  layers.hover = layers.map.append("g");
+
+
+  // Full-width, shallow legend outside the zoomable map group.
+  const legendHeight = 88;
+  const legendPadding = 12;
+  const legendWidth = W - legendPadding * 2;
+
+  layers.legend = svg.append("g")
+    .attr("class", "net-legend")
+    .attr(
+      "transform",
+      `translate(${legendPadding}, ${H - legendHeight - legendPadding})`
+    );
+
+  // Background.
+  layers.legend.append("rect")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .attr("rx", 8)
+    .attr("fill", "white")
+    .attr("fill-opacity", 0.94)
+    .attr("stroke", "#cbd5e1");
+
+  // Status line across the top.
+  layers.legend.append("text")
+    .attr("class", "net-legend-status")
+    .attr("x", 14)
+    .attr("y", 19)
+    .attr("fill", "#475569")
+    .attr("font-size", "11px");
+
+  // ----- Node size: left half -----
+  layers.legend.append("text")
+    .attr("x", 14)
+    .attr("y", 55)
+    .attr("fill", "#0f172a")
+    .attr("font-size", "12px")
+    .attr("font-weight", "600")
+    .text("Node size = exports");
+
+  const circleExamples = [
+    { x: 175, radius: 4, label: "Low" },
+    { x: 265, radius: 11, label: "Medium" },
+    { x: 375, radius: 22, label: "High" }
+  ];
+
+  const nodeKeys = layers.legend.append("g")
+    .attr("class", "net-legend-nodes")
+    .selectAll("g")
+    .data(circleExamples)
+    .join("g")
+    .attr("transform", d => `translate(${d.x}, 53)`);
+
+  nodeKeys.append("circle")
+    .attr("r", d => d.radius)
+    .attr("fill", "#94a3b8")
+    .attr("fill-opacity", 0.65)
+    .attr("stroke", "#64748b");
+
+  nodeKeys.append("text")
+    .attr("x", d => d.radius + 8)
+    .attr("y", 4)
+    .attr("fill", "#334155")
+    .attr("font-size", "10px")
+    .text(d => d.label);
+
+  // Divider.
+  layers.legend.append("line")
+    .attr("x1", 475)
+    .attr("x2", 475)
+    .attr("y1", 31)
+    .attr("y2", 76)
+    .attr("stroke", "#cbd5e1");
+
+  // ----- Edge width: right half -----
+  layers.legend.append("text")
+    .attr("x", 495)
+    .attr("y", 55)
+    .attr("fill", "#0f172a")
+    .attr("font-size", "12px")
+    .attr("font-weight", "600")
+    .text("Edge width = trade");
+
+  const edgeExamples = [
+    { x: 645, width: 1, label: "Low" },
+    { x: 750, width: 4, label: "Medium" },
+    { x: 865, width: 10, label: "High" }
+  ];
+
+  const edgeKeys = layers.legend.append("g")
+    .attr("class", "net-legend-edges")
+    .selectAll("g")
+    .data(edgeExamples)
+    .join("g");
+
+  edgeKeys.append("path")
+    .attr("d", d =>
+      taperedArc([d.x, 53], [d.x + 45, 53], d.width, 0)
+    )
+    .attr("fill", "#64748b")
+    .attr("stroke", "none");
+
+  edgeKeys.append("text")
+    .attr("x", d => d.x + 51)
+    .attr("y", 57)
+    .attr("fill", "#334155")
+    .attr("font-size", "10px")
+    .text(d => d.label);
+
+
+  // Zoom and pan behavior.
+  const zoom = d3.zoom()
+    .scaleExtent([1, 8])
+    .extent([[0, 0], [W, H]])
+    .filter(event =>
+      (!event.ctrlKey || event.type === "wheel") &&
+      !event.button &&
+      !event.target.closest(".net-legend")
+    )
+    .on("zoom", event => {
+      zoomScale = event.transform.k;
+
+      layers.map.attr("transform", event.transform);
+    
+      applyCounterScale();
+      counterScaleEdges();
+
+      console.log(
+        "Zoom:", zoomScale,
+        "Circle radius:", layers.nodes.select("circle").attr("r"),
+        "Base radius:", layers.nodes.select("circle").attr("data-base-r"),
+        "Label transform:", layers.labels.select("text").attr("transform")
+      );
+
+
+    });
+
+  svg.call(zoom)
+  .on("dblclick.zoom", () => {
+    svg.transition()
+      .duration(500)
+      .call(zoom.transform, d3.zoomIdentity);
+  });
+
 
   draw();
-  ["yearChanged", "productChanged", "countrySelected", "brushChanged"].forEach(e => on(e, draw));
+  // ["yearChanged", "productChanged", "countrySelected", "brushChanged"].forEach(e => on(e, draw));
+  on("productChanged", () => {
+    pos = calculatePositions(core, projection, state.product);
+    draw();
+  });
+  
+  ["yearChanged", "countrySelected", "brushChanged"].forEach(e => on(e, draw));
+
 }
 
 
@@ -122,14 +351,15 @@ function calculatePositions(core, projection, product) {
   );
 }
 
-// Curved path from a to b, bending to the left of the direction of travel.
-// function arc([x1, y1], [x2, y2]) {
-//   const k = 0.18, mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-//   return `M${x1},${y1}Q${mx + (y2 - y1) * k},${my - (x2 - x1) * k} ${x2},${y2}`;
-// }
 
 // Tapered curved path: wide at exporter, narrow at importer.
-function taperedArc([x1, y1], [x2, y2], startWidth, endWidth) {
+function taperedArc(
+  [x1, y1],
+  [x2, y2],
+  startWidth,
+  endWidth,
+  minHalfWidth = 0.4
+) {
   const k = 0.18;
   const cx = (x1 + x2) / 2 + (y2 - y1) * k;
   const cy = (y1 + y2) / 2 - (x2 - x1) * k;
@@ -162,7 +392,10 @@ function taperedArc([x1, y1], [x2, y2], startWidth, endWidth) {
     const taper = Math.pow(1 - t, 1.5);
     //const halfWidth = (endWidth / 2) + ((startWidth - endWidth) / 2) * taper;
     // const halfWidth = (endWidth / 2) + ((startWidth - endWidth) / 2) * taper;
-    const halfWidth = Math.max(0.4, (startWidth / 2) * (1 - 0.85 * t));
+    const halfWidth = Math.max(
+      minHalfWidth,
+      (startWidth / 2) * (1 - 0.85 * t)
+    );
 
     left.push([x + nx * halfWidth, y + ny * halfWidth]);
     right.push([x - nx * halfWidth, y - ny * halfWidth]);
@@ -173,7 +406,6 @@ function taperedArc([x1, y1], [x2, y2], startWidth, endWidth) {
 
   return "M" + points.map(([x, y]) => `${x},${y}`).join("L") + "Z";
 }
-
 
 
 function layoutLabels(labelled, exporters, selected, radius) {
@@ -237,6 +469,24 @@ function layoutLabels(labelled, exporters, selected, radius) {
         Math.max(0, 8 - top) * 100 +
         Math.max(0, bottom - (H - 8)) * 100;
 
+
+      for (const other of exporters) {
+        if (other.c === c) continue;
+        
+        const [nx, ny] = pos.get(other.c);
+        const nr = radius(other.exports || 0);
+        
+        const closestX = Math.max(left, Math.min(nx, right));
+        const closestY = Math.max(top, Math.min(ny, bottom));
+        
+        const dx = nx - closestX;
+        const dy = ny - closestY;
+        
+        if (dx * dx + dy * dy < (nr + 4) ** 2) {
+          score += 10000;
+        }
+      }
+
       // Penalize overlap with labels already positioned.
       for (const box of placed) {
         const overlapX = left < box.right && right > box.left;
@@ -276,8 +526,11 @@ function showHoverLabel(e) {
     .attr("class", "net-label")
     .attr("x", x + 10)
     .attr("y", y - 10)
+    .attr("data-node-x", x)
+    .attr("data-node-y", y)
     .attr("pointer-events", "none")
     .text(d => data.countryName(d.c));
+    counterScaleText(layers.hover.selectAll("text"));
 }
 
 function clearHoverLabel() {
@@ -285,15 +538,70 @@ function clearHoverLabel() {
 }
 
 
-
-
 function maxExports(p) {
   if (!sizeDomain[p]) sizeDomain[p] = d3.max(data.years(), y => d3.max(data.exportersInYear(p, y), e => e.exports)) || 1;
   return sizeDomain[p];
 }
 
+
+function updateNumericLegend(radiusScale, widthScale) {
+  const fractions = [0.1, 0.4, 1];
+
+  const nodeMax = radiusScale.domain()[1];
+  const edgeMax = widthScale.domain()[1];
+
+  // Node examples: 10%, 40%, and 100% of the export-scale maximum.
+  const nodeExamples = fractions.map((fraction, i) => ({
+    x: [175, 275, 385][i],
+    value: nodeMax * fraction
+  }));
+
+  const nodeKeys = layers.legend
+    .select(".net-legend-nodes")
+    .selectAll("g")
+    .data(nodeExamples)
+    .attr("transform", d => `translate(${d.x}, 53)`);
+
+  nodeKeys.select("circle")
+    .attr("r", d => radiusScale(d.value));
+
+  nodeKeys.select("text")
+    .attr("x", d => radiusScale(d.value) + 8)
+    .attr("y", 4)
+    .text(d => data.money(d.value));
+
+  // Edge examples: 10%, 40%, and 100% of the flow-scale maximum.
+  const edgeExamples = fractions.map((fraction, i) => ({
+    x: [640, 750, 860][i],
+    value: edgeMax * fraction
+  }));
+
+  const edgeKeys = layers.legend
+    .select(".net-legend-edges")
+    .selectAll("g")
+    .data(edgeExamples);
+
+  edgeKeys.select("path")
+    .attr("d", d =>
+      taperedArc(
+        [d.x, 53],
+        [d.x + 40, 53],
+        widthScale(d.value),
+        0
+      )
+    );
+
+  edgeKeys.select("text")
+    .attr("x", d => d.x + 46)
+    .attr("y", 57)
+    .text(d => data.money(d.value));
+}
+
+
 function draw() {
   const { product: p, year: y, country: sel, brushed } = state;
+
+  //CHANGING SECOND NUMBER CHANGES SPEED OF FADE
   const t = svg.transition().duration(state.playing ? 300 : 500);
 
   // Flows: the global top list, or the selected country's partners.
@@ -309,46 +617,60 @@ function draw() {
   flows = flows.filter(f => pos.has(f.e) && pos.has(f.i));
   const width = d3.scaleSqrt([0, d3.max(globalTop, f => f.v) || 1], [0.6, 10]);
 
-  // layers.flows.selectAll("path")
-  //   .data(flows, f => `${f.e}>${f.i}`)
-  //   .join(enter => enter.append("path").attr("stroke-width", 0))
-  //   .attr("class", f => `net-flow ${f.kind}`)
-  //   .attr("d", f => arc(pos.get(f.e), pos.get(f.i)))
-  //   .call(s => s.selectAll("title").data(f => [f]).join("title")
-  //     .text(f => `${data.countryName(f.e)} → ${data.countryName(f.i)}: ${data.money(f.v)}`))
-  //   .transition(t).attr("stroke-width", f => width(f.v));
-
-
   layers.flows.selectAll("path")
   .data(flows, f => `${f.e}>${f.i}`)
-  .join(enter => enter.append("path").attr("opacity", 0))
+  .join(
+    enter => enter.append("path")
+      .attr("opacity", 0)
+      .attr("d", f =>
+        taperedArc(
+          pos.get(f.e),
+          pos.get(f.i),
+          width(f.v) / zoomScale,
+          0,
+          0.4 / zoomScale
+        )
+      ),
+
+    update => update,
+
+    // Mark disappearing flows before starting their fade-out.
+    exit => exit
+      .attr("data-exiting", "true")
+      .transition(t)
+      .style("opacity", 0)
+      .remove()
+  )
+
+  // These apply only to entering and updating flows.
+  .attr("data-exiting", null)
+  .attr("data-base-width", f => width(f.v))
+
   .attr("class", f => `net-flow ${f.kind}`)
-  .attr("d", f => {
-    const w = width(f.v);
-
-    // return taperedArc(
-    //   pos.get(f.e),
-    //   pos.get(f.i),
-    //   w,
-    //   // Math.max(0.8, w * 0.15)
-    //   Math.max(0.2, w * 0.02)
-    // );
-
-    // return taperedArc(pos.get(f.e), pos.get(f.i), w, 0.05);
-
-    return taperedArc(pos.get(f.e), pos.get(f.i), w, 0);
-
-
-  })
-  // Color each flow by its kind (imports blue, exports orange), matching the CSS variables.
-  .style("fill", f => f.kind === "imports" ? "var(--imports)"
-                   : f.kind === "exports" ? "var(--exports)" : "#94a3b8")
+  .style("fill", f =>
+    f.kind === "imports" ? "var(--imports)"
+      : f.kind === "exports" ? "var(--exports)"
+      : "#94a3b8"
+  )
   .style("stroke", "none")
-  .call(s => s.selectAll("title").data(f => [f]).join("title")
-    .text(f => `${data.countryName(f.e)} → ${data.countryName(f.i)}: ${data.money(f.v)}`))
+  .call(s => s.selectAll("title")
+    .data(f => [f])
+    .join("title")
+    .text(f =>
+      `${data.countryName(f.e)} → ${data.countryName(f.i)}: ${data.money(f.v)}`
+    )
+  )
   .transition(t)
+  .attr("d", f =>
+    taperedArc(
+      pos.get(f.e),
+      pos.get(f.i),
+      width(f.v) / zoomScale,
+      0,
+      0.4 / zoomScale
+    )
+  )
   .style("opacity", 0.85);
-
 
 
   // Nodes: every country with a position that exported this year.
@@ -367,6 +689,11 @@ function draw() {
       })
       .on("mouseenter", (event, e) => showHoverLabel(e))
       .on("mouseleave", clearHoverLabel))
+
+    .attr("cx", e => pos.get(e.c)[0])
+    .attr("cy", e => pos.get(e.c)[1])
+
+
     .attr("class", e => {
       const c = data.country(e.c);
       return ["net-node", c?.hub && "hub", e.c === sel && "selected", brushed.has(e.c) && "brushed",
@@ -374,19 +701,12 @@ function draw() {
     })
     .attr("fill", e => data.regionColor(e.c))
     .call(s => s.selectAll("title").data(e => [e]).join("title")
-      .text(e => `${data.countryName(e.c)}${data.country(e.c)?.hub ? " (re-export hub)" : ""}\n` +
-                 `Exports ${data.money(e.exports)} · rank ${e.rank} · top supplier for ${e.top_supplier_of} countries`))
-    .transition(t).attr("r", e => r(e.exports));
+    .text(e => `${data.countryName(e.c)}${data.country(e.c)?.hub ? " (re-export hub)" : ""}\n` +
+             `Exports ${data.money(e.exports)} · rank ${e.rank} · top supplier for ${e.top_supplier_of} countries`))
+    .attr("data-base-r", e => r(e.exports))
+    .transition(t)
+    .attr("r", e => r(e.exports) / zoomScale);
 
-  // Labels: the biggest exporters, plus the selected country.
-  // const labelled = exporters.slice().sort((a, b) => b.exports - a.exports).slice(0, LABELS).map(e => e.c);
-  // if (sel && pos.has(sel) && !labelled.includes(sel)) labelled.push(sel);
-  // layers.labels.selectAll("text")
-  //   .data(labelled, c => c)
-  //   .join("text")
-  //   .attr("class", c => `net-label${sel && c !== sel && !partners.has(c) ? " faded" : ""}`)
-  //   .attr("x", c => pos.get(c)[0] + 7).attr("y", c => pos.get(c)[1] - 7)
-  //   .text(c => data.countryName(c));
   
   // Labels: biggest exporters, plus the selected country.
   const labelled = exporters
@@ -413,12 +733,23 @@ function draw() {
   )
   .attr("x", d => d.x)
   .attr("y", d => d.y)
+  .attr("data-node-x", d => pos.get(d.c)[0])
+  .attr("data-node-y", d => pos.get(d.c)[1])
   .attr("text-anchor", d => d.anchor)
   .text(d => data.countryName(d.c));
 
+  // Maintain label size and spacing when zooming.
+  applyCounterScale();
 
-  layers.legend.selectAll("text")
-    .data([sel ? "Blue lines: where it buys chips · Orange lines: where it sells them · Press Esc to clear"
-               : `Showing the ${flows.length} largest flows in ${y} · Circle size = chip exports · Line width = trade value`])
-    .join("text").text(d => d);
+  updateNumericLegend(r, width);
+
+  // Update only the status line, preserving all legend labels.
+  layers.legend.select(".net-legend-status")
+  .text(
+    sel
+      ? "Blue: suppliers · Orange: customers"
+      : `Showing the ${flows.length} largest flows in ${y}`
+  );
+
+  
 }
