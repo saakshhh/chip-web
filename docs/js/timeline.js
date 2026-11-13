@@ -9,7 +9,7 @@
 import { state, on, setYear, setPlaying } from "./state.js";
 import * as data from "./data.js";
 
-const W = 1000, H = 210, M = { top: 52, right: 20, bottom: 26, left: 56 };
+const W = 1000, H = 226, M = { top: 52, right: 20, bottom: 42, left: 56 };
 let svg, x, y, line, slider, yearLabel, playButton, timer = null;
 
 // Which dollars the chart shows: "nominal" (current dollars, field v) or "real" (constant
@@ -17,11 +17,23 @@ let svg, x, y, line, slider, yearLabel, playButton, timer = null;
 let adjusted = false;
 const value = d => (adjusted ? d.v_real : d.v);
 
+// Playback: one year every STEP_MS milliseconds at 1x
+const STEP_MS = 900;
+let speed = 1;
+
 export function init(el) {
   const yrs = data.years();
   el.innerHTML = `<h2>World chip trade over time</h2>
     <div class="tl-controls">
-      <button type="button" id="tl-play">Play</button>
+      <div class="tl-buttons">
+        <button type="button" id="tl-play">Play</button>
+        <select id="tl-speed" aria-label="Playback speed">
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+        </select>
+      </div>
       <input type="range" id="tl-slider" min="${yrs[0]}" max="${yrs.at(-1)}" step="1" value="${state.year}" aria-label="Year">
       <span class="tl-year" id="tl-year">${state.year}</span>
       <label class="tl-adjusted" title="Converts each year to ${data.getCore().meta.base_year} dollars using U.S. consumer prices (CPI)">
@@ -33,6 +45,10 @@ export function init(el) {
   playButton = el.querySelector("#tl-play");
   slider.addEventListener("input", e => { stop(); setYear(e.target.value); });
   playButton.addEventListener("click", () => (timer ? stop() : play()));
+  el.querySelector("#tl-speed").addEventListener("change", e => {
+    speed = +e.target.value;
+    if (timer) startTimer();
+  });
   el.querySelector("#tl-adjusted").addEventListener("change", e => { adjusted = e.target.checked; drawSeries(); });
 
   svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`)
@@ -45,6 +61,15 @@ export function init(el) {
     .call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(15));
   svg.append("g").attr("class", "tl-axis tl-y").attr("transform", `translate(${M.left},0)`);
   svg.append("g").attr("class", "tl-events");
+
+  // legend at the bottom
+  const legend = svg.append("g").attr("class", "tl-legend");
+  [["world", "Real-world event"], ["data", "Trade code revision"]].forEach(([kind, text], i) => {
+    const g = legend.append("g").attr("class", `tl-event ${kind}`)
+      .attr("transform", `translate(${M.left + i * 110},${H - 4})`);
+    g.append("line").attr("y1", -9).attr("y2", 2);
+    g.append("text").attr("x", 6).text(text);
+  });
   svg.append("path").attr("class", "tl-line");
   svg.append("line").attr("class", "tl-current").attr("y1", M.top - 6).attr("y2", H - M.bottom);
 
@@ -104,7 +129,7 @@ function layoutEvents(events) {
 
 function drawYear() {
   const cx = x(state.year);
-  svg.select(".tl-current").transition().duration(state.playing ? 250 : 300).attr("x1", cx).attr("x2", cx);
+  svg.select(".tl-current").transition().duration(state.playing ? Math.min(250, STEP_MS / speed / 2) : 300).attr("x1", cx).attr("x2", cx);
   slider.value = state.year;
   yearLabel.textContent = state.year;
 }
@@ -114,10 +139,16 @@ function play() {
   if (state.year === yrs.at(-1)) setYear(yrs[0]);
   setPlaying(true);
   playButton.textContent = "Pause";
+  startTimer();
+}
+
+function startTimer() {
+  const yrs = data.years();
+  if (timer) timer.stop();
   timer = d3.interval(() => {
     if (state.year >= yrs.at(-1)) return stop();
     setYear(state.year + 1);
-  }, 900);
+  }, STEP_MS / speed);
 }
 
 function stop() {
