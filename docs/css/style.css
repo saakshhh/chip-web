@@ -78,6 +78,13 @@ body.loading .loading-message { display: grid; }
 .tl-event.data line { stroke: #9ca3af; }
 .tl-event text { font-size: 10.5px; fill: var(--quiet); paint-order: stroke; stroke: #fff; stroke-width: 3px; }
 .tl-current { stroke: var(--ink); stroke-width: 1.5; }
+.tl-compare { margin: 4px 0 0; color: var(--quiet); font-size: 13px; }
+.tl-compare b.a { color: var(--accent); }
+.tl-compare b.b { color: var(--exports); }
+.tl-compare .tl-result { color: var(--ink); font-weight: 600; }
+.tl-compare button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 0 8px; margin-left: 6px; cursor: pointer; }
+.tl-period.a { fill: var(--accent); opacity: .1; }
+.tl-period.b { fill: var(--exports); opacity: .12; }
 
 /* ---------- Dependency and scatterplot (Kyungmin) ---------- */
 .dep-bar rect { fill: var(--imports); }

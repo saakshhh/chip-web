@@ -21,6 +21,11 @@ const value = d => (adjusted ? d.v_real : d.v);
 const STEP_MS = 900;
 let speed = 1;
 
+// Up to two periods to compare, each [firstYear, lastYear]
+// The first drag sets A, the second B, and a third starts over.
+let periods = [];
+let compareEl;
+
 export function init(el) {
   const yrs = data.years();
   el.innerHTML = `<h2>World chip trade over time</h2>
@@ -39,7 +44,12 @@ export function init(el) {
       <label class="tl-adjusted" title="Converts each year to ${data.getCore().meta.base_year} dollars using U.S. consumer prices (CPI)">
         <input type="checkbox" id="tl-adjusted"> Adjust for inflation (${data.getCore().meta.base_year} $)
       </label>
-    </div>`;
+    </div>
+    <div class="tl-compare" id="tl-compare"></div>`;
+  compareEl = el.querySelector("#tl-compare");
+  compareEl.addEventListener("click", e => {
+    if (e.target.id === "tl-clear") { periods = []; drawPeriods(); }
+  });
   slider = el.querySelector("#tl-slider");
   yearLabel = el.querySelector("#tl-year");
   playButton = el.querySelector("#tl-play");
@@ -60,6 +70,7 @@ export function init(el) {
   svg.append("g").attr("class", "tl-axis tl-x").attr("transform", `translate(0,${H - M.bottom})`)
     .call(d3.axisBottom(x).tickFormat(d3.format("d")).ticks(15));
   svg.append("g").attr("class", "tl-axis tl-y").attr("transform", `translate(${M.left},0)`);
+  svg.append("g").attr("class", "tl-periods");
   svg.append("g").attr("class", "tl-events");
 
   // legend at the bottom
@@ -73,10 +84,18 @@ export function init(el) {
   svg.append("path").attr("class", "tl-line");
   svg.append("line").attr("class", "tl-current").attr("y1", M.top - 6).attr("y2", H - M.bottom);
 
-  // Click anywhere on the chart to jump to that year.
-  svg.append("rect").attr("x", M.left).attr("y", M.top).attr("width", W - M.left - M.right)
-    .attr("height", H - M.top - M.bottom).attr("fill", "transparent").style("cursor", "pointer")
-    .on("click", event => { stop(); setYear(Math.round(x.invert(d3.pointer(event)[0]))); });
+  // Drag across the chart to pick a period to compare
+  const brush = d3.brushX().extent([[M.left, M.top], [W - M.right, H - M.bottom]])
+    .on("end", ({ selection, sourceEvent }) => {
+      if (!sourceEvent) return;
+      stop();
+      if (!selection) return setYear(Math.round(x.invert(d3.pointer(sourceEvent, svg.node())[0])));
+      const period = selection.map(px => Math.round(x.invert(px)));   // snaps to whatever closest whole year
+      periods = periods.length === 2 ? [period] : [...periods, period];
+      svg.select(".tl-brush").call(brush.move, null);   // hide the drag box; the shaded period replaces it
+      drawPeriods();
+    });
+  svg.append("g").attr("class", "tl-brush").call(brush);
 
   drawSeries();
   drawYear();
@@ -94,6 +113,7 @@ function drawSeries() {
   svg.select(".tl-y").transition().duration(400)
     .call(d3.axisLeft(y).ticks(4).tickFormat(v => data.money(v)));
   svg.select(".tl-line").datum(series).transition().duration(400).attr("d", line);
+  drawPeriods(); 
 
   // One marker per year, multiple events are seperated by \n
   const groups = layoutEvents(data.getCore().events);
@@ -125,6 +145,33 @@ function layoutEvents(events) {
       y1: ty + (evs.length - 1) * STACK_H + 4, y2: H - M.bottom,
     };
   });
+}
+
+function drawPeriods() {
+  svg.select(".tl-periods").selectAll("rect").data(periods).join("rect")
+    .attr("class", (p, i) => `tl-period ${i ? "b" : "a"}`)
+    .attr("x", p => x(p[0]))
+    .attr("width", p => Math.max(2, x(p[1]) - x(p[0])))
+    .attr("y", M.top).attr("height", H - M.top - M.bottom);
+
+  const series = data.worldSeries(state.product);
+  const avg = ([a, b]) => d3.mean(series.filter(d => d.y >= a && d.y <= b), value);
+  // Average yearly growth from the first to the last year of a period (compound annual growth).
+  const at = yr => value(series.find(d => d.y === yr));
+  const growth = ([a, b]) => (at(b) / at(a)) ** (1 / (b - a)) - 1;
+  const describe = (p, i) => `<b class="${i ? "b" : "a"}">${i ? "B" : "A"}</b> ` +
+    `${p[0] === p[1] ? p[0] : `${p[0]}–${p[1]}`}: avg ${data.money(avg(p))}/yr` +
+    (p[0] === p[1] ? "" : ` · growth ${d3.format("+.1%")(growth(p))}/yr`);
+
+  const lines = periods.map(describe);
+  if (periods.length === 0) lines.push("Drag across the chart to pick two periods to compare.");
+  if (periods.length === 1) lines.push(`<b class="b">B</b> drag again to pick period B`);
+  if (periods.length === 2) {
+    const change = d3.format("+.0%")(avg(periods[1]) / avg(periods[0]) - 1);
+    lines.push(`<span class="tl-result">Result: B is ${change} vs A</span>`);
+  }
+  if (periods.length) lines[lines.length - 1] += ` <button type="button" id="tl-clear">Clear</button>`;
+  compareEl.innerHTML = lines.map(l => `<div>${l}</div>`).join("");
 }
 
 function drawYear() {
