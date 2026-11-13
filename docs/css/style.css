@@ -74,7 +74,7 @@ body.loading .loading-message { display: grid; }
 .tl-axis text { fill: var(--quiet); }
 .tl-event line { stroke: var(--event); stroke-dasharray: 3 3; }
 .tl-event.data line { stroke: #9ca3af; }
-.tl-event text { font-size: 10.5px; fill: var(--quiet); }
+.tl-event text { font-size: 10.5px; fill: var(--quiet); paint-order: stroke; stroke: #fff; stroke-width: 3px; }
 .tl-current { stroke: var(--ink); stroke-width: 1.5; }
 
 /* ---------- Dependency and scatterplot (Kyungmin) ---------- */

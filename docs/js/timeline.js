@@ -70,33 +70,35 @@ function drawSeries() {
     .call(d3.axisLeft(y).ticks(4).tickFormat(v => data.money(v)));
   svg.select(".tl-line").datum(series).transition().duration(400).attr("d", line);
 
-  const events = layoutEvents(data.getCore().events);
-  svg.select(".tl-events").selectAll("g").data(events).join(enter => {
+  // One marker per year, multiple events are seperated by \n
+  const groups = layoutEvents(data.getCore().events);
+  svg.select(".tl-events").selectAll("g.tl-event").data(groups, d => d.year).join(enter => {
     const g = enter.append("g");
     g.append("line");
-    g.append("text");
+    g.append("title");
     return g;
   })
     .attr("class", d => `tl-event ${d.kind}`)
     .call(g => g.select("line").attr("x1", d => x(d.year)).attr("x2", d => x(d.year))
-      .attr("y1", d => d.ty + 3).attr("y2", H - M.bottom))
-    .call(g => g.select("text").attr("x", d => d.tx).attr("y", d => d.ty)
-      .attr("text-anchor", d => d.anchor).text(d => d.label))
-    .call(g => g.selectAll("title").data(d => [d]).join("title").text(d => d.detail));
+      .attr("y1", d => d.y1).attr("y2", d => d.y2))
+    .call(g => g.selectAll("text").data(d => d.events.map((e, i) => ({ ...e, d, i }))).join("text")
+      .attr("class", e => e.kind)
+      .attr("x", e => e.d.tx).attr("y", e => e.d.ty + e.i * STACK_H)
+      .attr("text-anchor", "middle").text(e => e.label))
+    .call(g => g.select("title").text(d => [d.year, ...d.events.map(e => `${e.label}: ${e.detail}`)].join("\n")));
 }
 
-// Put each event label on the first of four rows where it doesn't overlap a label already
-// placed. Labels near the right edge are right-aligned so they stay inside the chart.
+// Events alternate between height at top to seperate.
+const TIER_H = 16;   // how much lower the alternating years sit (2nd, 4th... event year)
+const STACK_H = 12;  // gap between labels in the same year (e.g. the two 2022 labels)
 function layoutEvents(events) {
-  const charW = 6, rows = [[], [], [], []];
-  return events.slice().sort((a, b) => a.year - b.year).map(e => {
-    const px = x(e.year), w = e.label.length * charW;
-    const anchor = px + 3 + w > W - M.right ? "end" : "start";
-    const x0 = anchor === "end" ? px - 3 - w : px + 3, x1 = x0 + w;
-    let row = rows.findIndex(r => r.every(([a, b]) => x1 + 6 < a || x0 > b + 6));
-    if (row === -1) row = rows.length - 1;
-    rows[row].push([x0, x1]);
-    return { ...e, anchor, tx: anchor === "end" ? px - 3 : px + 3, ty: 10 + row * 11 };
+  return d3.groups(events, e => e.year).sort((a, b) => a[0] - b[0]).map(([year, evs], i) => {
+    const ty = 10 + (i % 2) * TIER_H;   // alternate: high, low, high, low...
+    return {
+      year, events: evs, tx: x(year), ty,
+      kind: evs.some(e => e.kind === "world") ? "world" : "data",
+      y1: ty + (evs.length - 1) * STACK_H + 4, y2: H - M.bottom,
+    };
   });
 }
 
