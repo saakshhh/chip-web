@@ -12,6 +12,13 @@
 //   countrySelected  state.country changed (ISO3 code like "TWN", or null for none)
 //   brushChanged     state.brushed changed (a Set of ISO3 codes, empty for none)
 //   playingChanged   state.playing changed (true while the timeline animates)
+//
+// Team rules for selections:
+//   - Changing the year or product keeps state.country but empties state.brushed (the brushed
+//     points move, so the old group no longer means the same thing). yearChanged/productChanged
+//     fires first, then brushChanged, but only if there was a brush to clear. Both values are
+//     already updated before either event fires.
+//   - Esc and the Clear button empty both (see clearSelection in main.js).
 
 export const state = {
   year: 2024,
@@ -35,11 +42,21 @@ function emit(event) {
   bus.call(event, null, state);
 }
 
+// Empties state.brushed without firing an event. Returns true if there was anything to clear,
+// so the caller can fire brushChanged after its own event.
+function clearBrushedQuietly() {
+  if (state.brushed.size === 0) return false;
+  state.brushed = new Set();
+  return true;
+}
+
 export function setYear(year) {
   year = +year;
   if (year === state.year) return;
   state.year = year;
+  const brushCleared = clearBrushedQuietly();
   emit("yearChanged");
+  if (brushCleared) emit("brushChanged");
 }
 
 // Called by main.js after the product's data is loaded. Views shouldn't call this directly;
@@ -48,7 +65,9 @@ export function setProduct(product) {
   product = String(product);
   if (product === state.product) return;
   state.product = product;
+  const brushCleared = clearBrushedQuietly();
   emit("productChanged");
+  if (brushCleared) emit("brushChanged");
 }
 
 export function setCountry(iso3) {

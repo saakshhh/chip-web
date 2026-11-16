@@ -5,7 +5,7 @@
 // helpers, then subscribes to the state events it cares about (see state.js).
 
 import { loadCore, ensureProduct, countryName } from "./data.js";
-import { state, on, setProduct, setCountry } from "./state.js";
+import { state, on, setProduct, setCountry, setBrushed, setPlaying } from "./state.js";
 import * as network from "./network.js";
 import * as timeline from "./timeline.js";
 import * as dependency from "./dependency.js";
@@ -22,20 +22,34 @@ export async function requestProduct(product) {
   }
 }
 
+// Esc and the Clear button: drop the clicked country and the brushed group, keep the year and
+// product. This is a manual action, so it also pauses playback (team rule).
+function clearSelection() {
+  setPlaying(false);
+  setCountry(null);
+  if (state.brushed.size) setBrushed([]);
+}
+
 function wireControls() {
   const select = document.querySelector("#product");
   select.value = state.product;
   select.addEventListener("change", e => requestProduct(e.target.value));
 
+  // The badge shows the clicked country and/or how many countries are brushed, so the Clear
+  // button is visible whenever there is something to clear.
   const chip = document.querySelector("#selection");
   const name = document.querySelector("#selection-name");
-  document.querySelector("#clear-selection").addEventListener("click", () => setCountry(null));
-  on("countrySelected", s => {
-    chip.hidden = !s.country;
-    name.textContent = s.country ? countryName(s.country) : "";
-  });
-  // Escape clears the selection.
-  window.addEventListener("keydown", e => { if (e.key === "Escape") setCountry(null); });
+  function updateBadge(s) {
+    const parts = [];
+    if (s.country) parts.push(countryName(s.country));
+    if (s.brushed.size) parts.push(`${s.brushed.size} ${s.brushed.size === 1 ? "country" : "countries"} highlighted`);
+    chip.hidden = parts.length === 0;
+    name.textContent = parts.join(" · ");
+  }
+  ["countrySelected", "brushChanged"].forEach(e => on(e, updateBadge));
+
+  document.querySelector("#clear-selection").addEventListener("click", clearSelection);
+  window.addEventListener("keydown", e => { if (e.key === "Escape") clearSelection(); });
 }
 
 async function start() {
