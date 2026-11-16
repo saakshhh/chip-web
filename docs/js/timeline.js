@@ -102,7 +102,10 @@ export function init(el) {
   on("yearChanged", drawYear);
 
   // Pause playback when the user interacts with another view
-  ["countrySelected", "brushChanged", "productChanged"].forEach(e => on(e, stop));
+  ["countrySelected", "productChanged"].forEach(e => on(e, stop));
+  // Brushing pauses playback, but not when Play's own year step clears the brush (state.js
+  // empties it on every year change), or Play would stop after one year.
+  on("brushChanged", () => { if (!stepping) stop(); });
   on("playingChanged", s => { if (!s.playing) stop(); });
 }
 
@@ -171,6 +174,11 @@ function drawPeriods() {
     lines.push(`<span class="tl-result">Result: B is ${change} vs A</span>`);
   }
   if (periods.length) lines[lines.length - 1] += ` <button type="button" id="tl-clear">Clear</button>`;
+  // Growth across a trade-code revision year is partly reclassification, so flag it.
+  const revisions = data.getCore().events.filter(e => e.kind === "data").map(e => e.year);
+  const crossed = [...new Set(periods.flatMap(([a, b]) => revisions.filter(y => y > a && y <= b)))].sort();
+  if (crossed.length) lines.push(`<span class="tl-note">Includes the ${crossed.join(" and ")} trade-code ` +
+    `revision${crossed.length > 1 ? "s" : ""}, so part of the change may be reclassification, not real growth.</span>`);
   compareEl.innerHTML = lines.map(l => `<div>${l}</div>`).join("");
 }
 
@@ -189,12 +197,15 @@ function play() {
   startTimer();
 }
 
+let stepping = false;   // true while Play itself is changing the year
 function startTimer() {
   const yrs = data.years();
   if (timer) timer.stop();
   timer = d3.interval(() => {
     if (state.year >= yrs.at(-1)) return stop();
+    stepping = true;
     setYear(state.year + 1);
+    stepping = false;
   }, STEP_MS / speed);
 }
 
