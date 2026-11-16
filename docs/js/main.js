@@ -42,9 +42,16 @@ function wireControls() {
   function updateBadge(s) {
     const parts = [];
     if (s.country) parts.push(countryName(s.country));
-    if (s.brushed.size) parts.push(`${s.brushed.size} ${s.brushed.size === 1 ? "country" : "countries"} highlighted`);
+    // Name the highlighted countries: all of them if there are three or fewer, otherwise the
+    // first two and a count. Hovering the badge shows the full list.
+    const brushedNames = [...s.brushed].map(countryName).sort();
+    if (brushedNames.length) {
+      parts.push("Highlighted: " + (brushedNames.length <= 3 ? brushedNames.join(", ")
+        : `${brushedNames.slice(0, 2).join(", ")} +${brushedNames.length - 2} more`));
+    }
     chip.hidden = parts.length === 0;
     name.textContent = parts.join(" · ");
+    name.title = brushedNames.length > 3 ? `Highlighted: ${brushedNames.join(", ")}` : "";
   }
   ["countrySelected", "brushChanged"].forEach(e => on(e, updateBadge));
 
