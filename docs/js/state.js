@@ -18,6 +18,9 @@
 //     points move, so the old group no longer means the same thing). yearChanged/productChanged
 //     fires first, then brushChanged, but only if there was a brush to clear. Both values are
 //     already updated before either event fires.
+//   - A selected country and a brushed group never coexist. Clicking a country clears the brush,
+//     and brushing a group clears the selected country, so each view only ever answers one
+//     question at a time ("what about this country?" or "where is this group?").
 //   - Esc and the Clear button empty both (see clearSelection in main.js).
 
 export const state = {
@@ -74,12 +77,17 @@ export function setCountry(iso3) {
   const next = iso3 || null;
   if (next === state.country) return;
   state.country = next;
+  const brushCleared = next ? clearBrushedQuietly() : false;   // a new country replaces the brush
   emit("countrySelected");
+  if (brushCleared) emit("brushChanged");
 }
 
 export function setBrushed(codes) {
   state.brushed = new Set(codes || []);
+  const countryCleared = state.brushed.size > 0 && state.country !== null;   // a brush replaces the country
+  if (countryCleared) state.country = null;
   emit("brushChanged");
+  if (countryCleared) emit("countrySelected");
 }
 
 export function setPlaying(playing) {
