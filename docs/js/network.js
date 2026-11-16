@@ -35,6 +35,7 @@ import { state, on, setCountry } from "./state.js";
 import * as data from "./data.js";
 
 const W = 1000, H = 520;
+const LEGEND_SPACE = 104;   // room below the map for the legend, so it never covers land
 const TOP_N = 60;          // flows drawn in the global view
 const TOP_PARTNERS = 8;    // suppliers and customers drawn when a country is selected
 const LABELS = 8;          // biggest exporters that get a label
@@ -109,12 +110,16 @@ export function init(el) {
 
   
   svg = d3.select(el).append("svg")
-    .attr("viewBox", `0 0 ${W} ${H}`)
+    .attr("viewBox", `0 0 ${W} ${H + LEGEND_SPACE}`)
     .attr("role", "img")
     .attr("aria-label", "World map of chip trade flows");
 
   // Shared group: everything that should zoom and pan together.
-  layers.map = svg.append("g").attr("class", "net-map");
+  // Clip the map to its own area so zooming in never spills over the legend below it.
+  svg.append("defs").append("clipPath").attr("id", "net-clip")
+    .append("rect").attr("width", W).attr("height", H);
+  layers.map = svg.append("g").attr("clip-path", "url(#net-clip)")
+    .append("g").attr("class", "net-map");
 
   // Pacific-centered so the East Asia hubs and the Americas aren't split by the map edge.
   // const projection = d3.geoEqualEarth().rotate([-150, 0]).fitExtent([[8, 8], [W - 8, H - 8]], { type: "Sphere" });
@@ -147,7 +152,7 @@ export function init(el) {
     .attr("class", "net-legend")
     .attr(
       "transform",
-      `translate(${legendPadding}, ${H - legendHeight - legendPadding})`
+      `translate(${legendPadding}, ${H + 4})`
     );
 
   // Background.
@@ -600,6 +605,7 @@ function updateNumericLegend(radiusScale, widthScale) {
 
 function draw() {
   const { product: p, year: y, country: sel, brushed } = state;
+  const brushing = !sel && brushed.size > 0;   // a selected country takes priority over a brush
 
   //CHANGING SECOND NUMBER CHANGES SPEED OF FADE
   const t = svg.transition().duration(state.playing ? 300 : 500);
@@ -670,7 +676,8 @@ function draw() {
       0.4 / zoomScale
     )
   )
-  .style("opacity", 0.85);
+  // With a brush (and no selected country), fade flows that don't touch a brushed country.
+  .style("opacity", f => brushing && !brushed.has(f.e) && !brushed.has(f.i) ? 0.08 : 0.85);
 
 
   // Nodes: every country with a position that exported this year.
@@ -697,7 +704,8 @@ function draw() {
     .attr("class", e => {
       const c = data.country(e.c);
       return ["net-node", c?.hub && "hub", e.c === sel && "selected", brushed.has(e.c) && "brushed",
-              sel && e.c !== sel && !partners.has(e.c) && "faded"].filter(Boolean).join(" ");
+              ((sel && e.c !== sel && !partners.has(e.c)) || (brushing && !brushed.has(e.c))) && "faded"]
+              .filter(Boolean).join(" ");
     })
     .attr("fill", e => data.regionColor(e.c))
     .call(s => s.selectAll("title").data(e => [e]).join("title")
@@ -718,6 +726,9 @@ function draw() {
   if (sel && pos.has(sel) && !labelled.includes(sel)) {
   labelled.push(sel);
   }
+  if (brushing) {
+    exporters.forEach(e => { if (brushed.has(e.c) && !labelled.includes(e.c)) labelled.push(e.c); });
+  }
 
   // Remember which countries already have permanent labels.
   visibleLabels = new Set(labelled);
@@ -729,7 +740,7 @@ function draw() {
   .data(labelPositions, d => d.c)
   .join("text")
   .attr("class", d =>
-    `net-label${sel && d.c !== sel && !partners.has(d.c) ? " faded" : ""}`
+    `net-label${(sel && d.c !== sel && !partners.has(d.c)) || (brushing && !brushed.has(d.c)) ? " faded" : ""}`
   )
   .attr("x", d => d.x)
   .attr("y", d => d.y)
