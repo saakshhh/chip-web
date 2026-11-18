@@ -3,7 +3,6 @@
 //
 // Each view module exports init(element). A view draws itself from `state` and the data
 // helpers, then subscribes to the state events it cares about (see state.js).
-
 import { loadCore, ensureProduct, countryName } from "./data.js";
 import { state, on, setProduct, setCountry, setBrushed, setPlaying } from "./state.js";
 import * as network from "./network.js";
@@ -39,21 +38,28 @@ function wireControls() {
   // button is visible whenever there is something to clear.
   const chip = document.querySelector("#selection");
   const name = document.querySelector("#selection-name");
+
   function updateBadge(s) {
     const parts = [];
-    if (s.country) parts.push(countryName(s.country));
+
+    if (s.country) parts.push(countryName(s.country) +
+      (s.compareCountry ? ` vs ${countryName(s.compareCountry)}` : ""));
+
     // Name the highlighted countries: all of them if there are three or fewer, otherwise the
     // first two and a count. Hovering the badge shows the full list.
     const brushedNames = [...s.brushed].map(countryName).sort();
+
     if (brushedNames.length) {
       parts.push("Highlighted: " + (brushedNames.length <= 3 ? brushedNames.join(", ")
         : `${brushedNames.slice(0, 2).join(", ")} +${brushedNames.length - 2} more`));
     }
+
     chip.hidden = parts.length === 0;
     name.textContent = parts.join(" · ");
     name.title = brushedNames.length > 3 ? `Highlighted: ${brushedNames.join(", ")}` : "";
   }
-  ["countrySelected", "brushChanged"].forEach(e => on(e, updateBadge));
+
+  ["countrySelected", "brushChanged", "comparisonChanged"].forEach(e => on(e, updateBadge));
 
   document.querySelector("#clear-selection").addEventListener("click", clearSelection);
   window.addEventListener("keydown", e => { if (e.key === "Escape") clearSelection(); });

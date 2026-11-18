@@ -23,15 +23,26 @@
 //     question at a time ("what about this country?" or "where is this group?").
 //   - Esc and the Clear button empty both (see clearSelection in main.js).
 
+
+
 export const state = {
   year: 2024,
   product: "8542",
   country: null,
+  compareCountry: null,
   brushed: new Set(),
   playing: false,
 };
 
-const bus = d3.dispatch("yearChanged", "productChanged", "countrySelected", "brushChanged", "playingChanged");
+const bus = d3.dispatch(
+  "yearChanged",
+  "productChanged",
+  "countrySelected",
+  "brushChanged",
+  "playingChanged",
+  "comparisonChanged"
+);
+
 let nextId = 0;
 
 // Subscribe to an event. Returns a function that unsubscribes.
@@ -76,22 +87,64 @@ export function setProduct(product) {
 export function setCountry(iso3) {
   const next = iso3 || null;
   if (next === state.country) return;
+
   state.country = next;
-  const brushCleared = next ? clearBrushedQuietly() : false;   // a new country replaces the brush
+
+  // Clear comparison if the primary selection disappears,
+  // or if both selections would become the same country.
+  const comparisonCleared =
+    state.compareCountry &&
+    (!next || next === state.compareCountry);
+
+  if (comparisonCleared) {
+    state.compareCountry = null;
+  }
+
+  const brushCleared = next ? clearBrushedQuietly() : false;
+
   emit("countrySelected");
+  if (comparisonCleared) emit("comparisonChanged");
   if (brushCleared) emit("brushChanged");
 }
 
 export function setBrushed(codes) {
   state.brushed = new Set(codes || []);
-  const countryCleared = state.brushed.size > 0 && state.country !== null;   // a brush replaces the country
-  if (countryCleared) state.country = null;
+
+  const countryCleared =
+    state.brushed.size > 0 && state.country !== null;
+
+  const comparisonCleared =
+    state.brushed.size > 0 && state.compareCountry !== null;
+
+  if (countryCleared) {
+    state.country = null;
+  }
+
+  if (comparisonCleared) {
+    state.compareCountry = null;
+  }
+
   emit("brushChanged");
   if (countryCleared) emit("countrySelected");
+  if (comparisonCleared) emit("comparisonChanged");
 }
 
 export function setPlaying(playing) {
   if (!!playing === state.playing) return;
   state.playing = !!playing;
   emit("playingChanged");
+}
+
+// Set the second country without changing the primary map focus.
+export function setComparison(iso3) {
+  const next =
+    iso3 && state.country && iso3 !== state.country
+      ? iso3
+      : null;
+
+  if (next === state.compareCountry) return;
+
+  state.compareCountry = next;
+  setPlaying(false);
+  emit("comparisonChanged");
 }
