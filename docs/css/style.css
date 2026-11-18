@@ -97,3 +97,142 @@ body.loading .loading-message { display: grid; }
 .sc-dot.dim { opacity: .25; }
 .sc-axis text { fill: var(--quiet); font-size: 11px; }
 .sc-label { font-size: 11px; fill: var(--quiet); }
+
+/* ADDED: Dependency comparison, collapsible history and scatterplot labels. */
+
+.panel-network {
+  align-self: start;
+}
+
+.dep-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dep-controls select {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1;
+}
+
+.dep-controls button {
+  cursor: pointer;
+}
+
+.dep-cards {
+  display: grid;
+  gap: 20px;
+}
+
+.dep-country {
+  min-width: 0;
+}
+
+.dep-stats {
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.dep-history {
+  margin-top: 12px;
+}
+
+.dep-history summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.dep-history > div {
+  margin-top: 10px;
+}
+
+.layout.is-comparing {
+  grid-template-areas:
+    "network scatter"
+    "dependency dependency"
+    "timeline timeline";
+}
+
+.is-comparing .side {
+  display: contents;
+}
+
+.is-comparing #dependency {
+  grid-area: dependency;
+}
+
+.is-comparing #scatter {
+  grid-area: scatter;
+  align-self: start;
+}
+
+.is-comparing .dep-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sc-dot.compared {
+  stroke: #8064a2;
+  stroke-width: 2;
+  stroke-dasharray: 2 1;
+}
+
+.sc-country-label {
+  font-size: 9px;
+  fill: var(--ink);
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .layout.is-comparing {
+    grid-template-areas:
+      "network"
+      "dependency"
+      "scatter"
+      "timeline";
+  }
+}
+
+@media (max-width: 650px) {
+  .is-comparing .dep-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ADDED: Keep header controls and long selection badges inside narrow screens. */
+@media (max-width: 650px) {
+  .controls {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .controls label {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .controls select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .selection {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .selection #selection-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+

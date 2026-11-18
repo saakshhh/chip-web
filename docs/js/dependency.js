@@ -8,11 +8,18 @@
 //      "other" in some years; decide how to show that honestly.
 //   2. A small line of the HHI over time, with the current year marked.
 //   3. Comparison mode: the same chart for a second country, same scales (with Alex).
-
-import { state, on, setCountry } from "./state.js";
+import { state, on, setCountry, setComparison, setPlaying } from "./state.js";
 import * as data from "./data.js";
 
 let el;
+let historyOpen = false;
+
+const PALETTE = [
+  "#8064a2",
+  "#599447",
+  "#bd6195",
+  "#8c6d51",
+];
 
 const WIDTH = 336;
 const MARGIN = { top: 20, right: 12, bottom: 30, left: 42 };
@@ -22,36 +29,134 @@ export function init(element) {
   el = element;
   draw();
 
-  ["countrySelected", "yearChanged", "productChanged"].forEach(event =>
-    on(event, draw)
-  );
+  [
+    "countrySelected",
+    "yearChanged",
+    "productChanged",
+    "comparisonChanged",
+  ].forEach(event => on(event, draw));
 }
 
+// ADDED: Render controls and share one supplier list/color scale across both cards.
 function draw() {
-  const { country: c, year, product } = state;
+  const previous = el.querySelector(".dep-history");
+  if (previous) historyOpen = previous.open;
 
-  if (!c) {
+  const { country, compareCountry, year, product } = state;
+
+  el.replaceChildren();
+
+  document.querySelector(".layout")
+    .classList.toggle("is-comparing", Boolean(compareCountry));
+
+  if (!country) {
     el.innerHTML = `<h2>Where a country buys its chips</h2>
       <p class="hint">Click a country on the map or in the scatterplot to see its suppliers.</p>`;
     return;
   }
 
+  const controls = d3.select(el).append("div")
+    .attr("class", "dep-controls");
+
+  controls.append("label")
+    .attr("for", "dep-compare")
+    .text("Compare with");
+
+  // ADDED: Pause before opening/focusing the dropdown so a year tick cannot replace it.
+
+  const select = controls.append("select")
+  .attr("id", "dep-compare")
+  .on("pointerdown", () => setPlaying(false))
+  .on("focus", () => setPlaying(false))
+  .on("change", event => setComparison(event.target.value));
+
+  select.append("option")
+    .attr("value", "")
+    .text("No comparison");
+
+  select.selectAll("option.country")
+    .data(
+      data.getCore().countries
+        .filter(d => d.c !== country)
+        .sort((a, b) => d3.ascending(a.name, b.name))
+    )
+    .join("option")
+    .attr("class", "country")
+    .attr("value", d => d.c)
+    .text(d => d.name);
+
+  select.property("value", compareCountry || "");
+
+  if (compareCountry) {
+    controls.append("button")
+      .attr("type", "button")
+      .text("End comparison")
+      .on("click", () => setComparison(null));
+
+    d3.select(el).append("p")
+      .attr("class", "hint")
+      .text(
+        "Same year, product and axes. " +
+        "The map focuses on the first country. " +
+        "Brushing or Clear ends comparison."
+      );
+  }
+
+  const countries = [country, compareCountry].filter(Boolean);
+
+  // Rank suppliers by their individually reported trade values.
+  // The selected year does not affect this list.
+  const totals = d3.rollups(
+    countries.flatMap(c => data.importerHistory(product, c)).flatMap(record =>
+      record.suppliers.map(supplier => ({
+        code: supplier.c,
+        value: record.imports * supplier.s,
+      }))
+    ),
+    entries => d3.sum(entries, entry => entry.value),
+    entry => entry.code
+  );
+
+  totals.sort((a, b) =>
+    d3.descending(a[1], b[1]) || d3.ascending(a[0], b[0])
+  );
+
+  const supplierCodes = totals.slice(0, 4).map(([code]) => code);
+
+  const color = d3.scaleOrdinal()
+    .domain([...supplierCodes, OTHER])
+    .range([
+      ...PALETTE.slice(0, supplierCodes.length),
+      "#cbd5e1",
+    ]);
+
+  const cards = d3.select(el).append("div")
+    .attr("class", "dep-cards");
+
+  for (const c of countries) {
+    const container = cards.append("article")
+      .attr("class", "dep-country")
+      .node();
+
+    drawCountry(container, c, product, year, supplierCodes, color);
+  }
+}
+
+function drawCountry(container, c, product, year, supplierCodes, color) {
   const rec = data.importer(product, year, c);
 
   if (!rec) {
-    el.innerHTML = `<h2>${data.countryName(c)}</h2>
+    container.innerHTML = `<h2>${data.countryName(c)}</h2>
       <p class="hint">No recorded chip imports in ${year}.</p>`;
 
-    drawHistory(c, product, year);
+    drawHistory(container, c, product, year, supplierCodes, color);
     return;
   }
 
-  el.innerHTML = `<h2>Where ${data.countryName(c)} buys its chips, ${year}</h2>
+  container.innerHTML = `<h2>Where ${data.countryName(c)} buys its chips, ${year}</h2>
     <p class="hint">Share of ${data.money(rec.imports)} in chip imports, by supplier.</p>`;
 
-  drawHistory(c, product, year);
-
-  d3.select(el).append("h3")
+  d3.select(container).append("h3")
     .style("font-size", "13px")
     .style("margin", "12px 0 6px")
     .text(`Top suppliers in ${year}`);
@@ -66,7 +171,7 @@ function draw() {
   const labelW = 112;
   const xs = d3.scaleLinear([0, 1], [0, W - labelW - 48]);
 
-  const svg = d3.select(el).append("svg")
+  const svg = d3.select(container).append("svg")
     .attr("viewBox", `0 0 ${W} ${rows.length * rowH + 4}`)
     .attr("role", "img")
     .attr("aria-label", `Chip suppliers of ${data.countryName(c)} in ${year}`);
@@ -96,40 +201,44 @@ function draw() {
     .attr("y", 15)
     .text(d => data.pct(d.s));
 
-  d3.select(el).append("div")
+  d3.select(container).append("div")
     .attr("class", "dep-stats")
     .html(
       `<span>Top 3 share <b>${data.pct(rec.top3_share)}</b></span>
        <span>HHI <b>${rec.hhi.toFixed(2)}</b></span>
        <span>Suppliers <b>${rec.n_suppliers}</b></span>`
     );
+
+  drawHistory(container, c, product, year, supplierCodes, color);
 }
 
-function drawHistory(countryCode, product, selectedYear) {
+function drawHistory(container, countryCode, product, selectedYear, supplierCodes, color) {
   const history = data.importerHistory(product, countryCode);
 
   if (history.length === 0) {
     return;
   }
 
-  // Rank suppliers by their individually reported trade values.
-  // The selected year does not affect this list.
-  const totals = d3.rollups(
-    history.flatMap(record =>
-      record.suppliers.map(supplier => ({
-        code: supplier.c,
-        value: record.imports * supplier.s,
-      }))
-    ),
-    entries => d3.sum(entries, entry => entry.value),
-    entry => entry.code
-  );
+  // ADDED: Keep history below the current-year summary and preserve its open state.
+  const details = d3.select(container).append("details")
+    .attr("class", "dep-history")
+    .property("open", historyOpen);
 
-  totals.sort((a, b) =>
-    d3.descending(a[1], b[1]) || d3.ascending(a[0], b[0])
-  );
+  details.append("summary")
+    .text("Supplier shares and HHI history");
 
-  const supplierCodes = totals.slice(0, 4).map(([code]) => code);
+  const historyContainer = details.append("div");
+
+  details.on("toggle", function () {
+    if (!this.isConnected) return;
+
+    historyOpen = this.open;
+
+    d3.select(el)
+      .selectAll(".dep-history")
+      .property("open", historyOpen);
+  });
+
   const keys = [...supplierCodes, OTHER];
   const years = data.years();
 
@@ -173,13 +282,6 @@ function drawHistory(countryCode, product, selectedYear) {
     return row;
   });
 
-  const color = d3.scaleOrdinal()
-    .domain(keys)
-    .range([
-      ...d3.schemeTableau10.slice(0, supplierCodes.length),
-      "#cbd5e1",
-    ]);
-
   const x = d3.scaleLinear()
     .domain(d3.extent(years))
     .range([MARGIN.left, WIDTH - MARGIN.right]);
@@ -192,7 +294,7 @@ function drawHistory(countryCode, product, selectedYear) {
     .domain([0, 1])
     .range([310, 230]);
 
-  const svg = d3.select(el).append("svg")
+  const svg = historyContainer.append("svg")
     .attr("viewBox", `0 0 ${WIDTH} 345`)
     .attr("role", "img")
     .attr(
@@ -309,7 +411,7 @@ function drawHistory(countryCode, product, selectedYear) {
     .attr("stroke-dasharray", "3 3")
     .attr("pointer-events", "none");
 
-  const legend = d3.select(el).append("div")
+  const legend = historyContainer.append("div")
     .style("display", "flex")
     .style("flex-wrap", "wrap")
     .style("gap", "4px 12px")
@@ -333,11 +435,12 @@ function drawHistory(countryCode, product, selectedYear) {
       key === OTHER ? "Other suppliers" : data.countryName(key)
     );
 
-  d3.select(el).append("p")
+  historyContainer.append("p")
     .attr("class", "hint")
     .text(
-      "Four suppliers are selected by their total individually reported trade value " +
-      "across all years. Each year reports only its top five suppliers individually; " +
+      "Up to four suppliers are selected by their combined individually reported trade value " +
+      "across all years and displayed countries. Both charts use the same suppliers and colors. " +
+      "Each year reports only its top five suppliers individually; " +
       "shares outside that list are included in Other suppliers. " +
       "A missing colored band does not imply zero trade. Missing years appear as gaps."
     );

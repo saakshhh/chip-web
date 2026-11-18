@@ -17,7 +17,7 @@ import * as data from "./data.js";
 
 const W = 336, H = 260, M = { top: 12, right: 22, bottom: 34, left: 40 };
 const MIN_IMPORTS = 100;   // US$ millions; smaller importers add noise
-let svg, x, y, dots, brush;
+let svg, x, y, dots, brush, labels;
 
 // ADDED: The x-axis choice belongs to this view.
 let xMetric = "imports";
@@ -62,26 +62,48 @@ export function init(el) {
 
   svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`)
     .attr("role", "img").attr("aria-label", "Scatterplot of chip imports against supplier concentration");
+
   x = d3.scaleLog().range([M.left, W - M.right]);
   y = d3.scaleLinear([0, 1], [H - M.bottom, M.top]);
 
-  svg.append("g").attr("class", "sc-axis sc-x").attr("transform", `translate(0,${H - M.bottom})`);
-  svg.append("g").attr("class", "sc-axis sc-y").attr("transform", `translate(${M.left},0)`)
+  svg.append("g")
+    .attr("class", "sc-axis sc-x")
+    .attr("transform", `translate(0,${H - M.bottom})`);
+
+  svg.append("g")
+    .attr("class", "sc-axis sc-y")
+    .attr("transform", `translate(${M.left},0)`)
     .call(d3.axisLeft(y).ticks(5));
 
   // CHANGED: Add sc-x-label so draw() can update this label.
-  svg.append("text").attr("class", "sc-label sc-x-label").attr("x", W - M.right).attr("y", H - 4)
-    .attr("text-anchor", "end").text("Chip imports (log scale)");
+  svg.append("text")
+    .attr("class", "sc-label sc-x-label")
+    .attr("x", W - M.right)
+    .attr("y", H - 4)
+    .attr("text-anchor", "end")
+    .text("Chip imports (log scale)");
 
-  svg.append("text").attr("class", "sc-label").attr("x", 4).attr("y", M.top - 2).text("HHI");
+  svg.append("text")
+    .attr("class", "sc-label")
+    .attr("x", 4)
+    .attr("y", M.top - 2)
+    .text("HHI");
 
-  brush = d3.brush().extent([[M.left, M.top], [W - M.right, H - M.bottom]]).on("end", brushed);
-  svg.append("g").attr("class", "sc-brush").call(brush);
+  brush = d3.brush()
+    .extent([[M.left, M.top], [W - M.right, H - M.bottom]])
+    .on("end", brushed);
+
+  svg.append("g")
+    .attr("class", "sc-brush")
+    .call(brush);
+
   dots = svg.append("g");
+  labels = svg.append("g").attr("aria-hidden", "true");
 
   draw();
+
   ["yearChanged", "productChanged"].forEach(e => on(e, draw));
-  ["countrySelected", "brushChanged"].forEach(e => on(e, highlight));
+  ["countrySelected", "brushChanged", "comparisonChanged"].forEach(e => on(e, highlight));
 }
 
 function points() {
@@ -110,6 +132,7 @@ function draw() {
   const axisLabel = xMetric === "imports" ? "Chip imports" : "Total chip trade";
 
   svg.select(".sc-x-label").text(`${axisLabel} (log scale)`);
+
   svg.attr(
     "aria-label",
     `Scatterplot of ${axisLabel.toLowerCase()} against supplier concentration`
@@ -117,8 +140,18 @@ function draw() {
 
   // One tick per power of ten keeps the log axis readable.
   const [lo, hi] = x.domain();
-  const ticks = d3.range(Math.ceil(Math.log10(lo)), Math.floor(Math.log10(hi)) + 1).map(k => 10 ** k);
-  svg.select(".sc-x").call(d3.axisBottom(x).tickValues(ticks).tickFormat(v => data.money(v)));
+
+  const ticks = d3.range(
+    Math.ceil(Math.log10(lo)),
+    Math.floor(Math.log10(hi)) + 1
+  ).map(k => 10 ** k);
+
+  svg.select(".sc-x")
+    .call(
+      d3.axisBottom(x)
+        .tickValues(ticks)
+        .tickFormat(v => data.money(v))
+    );
 
   dots.selectAll("circle").data(pts, d => d.c)
     .join(enter => enter.append("circle").attr("r", 0)
@@ -130,17 +163,26 @@ function draw() {
       .text(d => `${data.countryName(d.c)}: ${axisLabel} ${data.money(d.xValue)}, HHI ${d.hhi.toFixed(2)}, top supplier ${data.countryName(d.top1)}`))
     .transition().duration(state.playing ? 300 : 500)
     // CHANGED: Position points using the selected measure.
-    .attr("cx", d => x(d.xValue)).attr("cy", d => y(d.hhi)).attr("r", 4);
+    .attr("cx", d => x(d.xValue))
+    .attr("cy", d => y(d.hhi))
+    .attr("r", 4);
 
   highlight();
 }
 
 function highlight() {
   const b = state.brushed;
+
   dots.selectAll("circle")
     .classed("selected", d => d.c === state.country)
+    .classed("compared", d => d.c === state.compareCountry)
     .classed("dim", d => b.size > 0 && !b.has(d.c));
-  if (b.size === 0) svg.select(".sc-brush").call(brush.move, null);
+
+  drawLabels();
+
+  if (b.size === 0) {
+    svg.select(".sc-brush").call(brush.move, null);
+  }
 }
 
 function brushed({ selection, sourceEvent }) {
@@ -158,4 +200,91 @@ function brushed({ selection, sourceEvent }) {
   });
 
   setBrushed(selected.data().map(d => d.c));
+}
+
+// ADDED: Label selected countries first, then maximum x-value and highest HHI.
+// Try multiple positions, rejecting overlaps and keeping labels inside the plot.
+function drawLabels() {
+  const pts = points();
+
+  const candidates = [
+    pts.find(d => d.c === state.country),
+    pts.find(d => d.c === state.compareCountry),
+    d3.greatest(pts, d => d.xValue),
+    d3.greatest(pts, d => d.hhi),
+  ].filter(Boolean);
+
+  const seen = new Set();
+  const boxes = [];
+  const placed = [];
+
+  for (const d of candidates) {
+    if (
+      seen.has(d.c) ||
+      (state.brushed.size && !state.brushed.has(d.c))
+    ) {
+      continue;
+    }
+
+    seen.add(d.c);
+
+    const text = d.c; // ISO3 labels stay compact; hover on a dot gives the full name.
+    const w = text.length * 6 + 4;
+    const h = 12;
+    const cx = x(d.xValue);
+    const cy = y(d.hhi);
+
+    const positions = [
+      [7, -5],
+      [-w - 7, -5],
+      [7, 15],
+      [-w - 7, 15],
+    ];
+
+    for (const [dx, dy] of positions) {
+      const left = cx + dx;
+      const top = cy + dy - h;
+
+      const box = {
+        left,
+        top,
+        right: left + w,
+        bottom: top + h,
+      };
+
+      if (
+        box.left < M.left ||
+        box.right > W - M.right ||
+        box.top < M.top ||
+        box.bottom > H - M.bottom
+      ) {
+        continue;
+      }
+
+      if (
+        boxes.some(b =>
+          box.left < b.right &&
+          box.right > b.left &&
+          box.top < b.bottom &&
+          box.bottom > b.top
+        )
+      ) {
+        continue;
+      }
+
+      boxes.push(box);
+      placed.push({ ...d, text, dx, dy });
+      break;
+    }
+  }
+
+  labels.selectAll("text")
+    .data(placed, d => d.c)
+    .join("text")
+    .attr("class", "sc-country-label")
+    .text(d => d.text)
+    .transition()
+    .duration(state.playing ? 300 : 500)
+    .attr("x", d => x(d.xValue) + d.dx)
+    .attr("y", d => y(d.hhi) + d.dy);
 }
